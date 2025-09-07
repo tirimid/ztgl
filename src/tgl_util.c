@@ -59,7 +59,7 @@ tgl_endtimer(uint64_t timer, char const *name)
 	uint64_t d = tgl_unixus() - timer;
 	fprintf(
 		tgl_conf.log,
-		"\x1b[1;32mprofile\x1b[0m: %s: %llu\n",
+		"\x1b[1;33mprofile\x1b[0m: %s: %llu\n",
 		name,
 		(unsigned long long)d
 	);
