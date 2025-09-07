@@ -10,8 +10,8 @@ echo "#ifdef TGL_IMPLEMENTATION" >> $OUTFILE
 echo "#ifndef TGL_IMPLINCLUDED" >> $OUTFILE
 echo "#define TGL_IMPLINCLUDED" >> $OUTFILE
 
-echo "[$0] combine: add include (include.c)" >&2
-cat src/include.c >> $OUTFILE
+echo "[$0] combine: add prelude (prelude.c)" >&2
+cat src/prelude.c >> $OUTFILE
 
 echo "[$0] combine: add input (tgl_input.c)" >&2
 cat src/tgl_input.c >> $OUTFILE

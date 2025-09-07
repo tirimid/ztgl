@@ -8,3 +8,5 @@
 
 // system dependencies.
 #include <sys/time.h>
+
+tgl_conf_t tgl_conf;
