@@ -90,3 +90,15 @@ tgl_d2r(float d)
 {
 	return d / 180.0f * TGL_PI;
 }
+
+void *
+tgl_allocbatch(tgl_allocbatch_t *allocs, size_t nallocs)
+{
+	// TODO: implement.
+}
+
+void *
+tgl_reallocbatch(tgl_reallocbatch_t *reallocs, size_t nreallocs)
+{
+	// TODO: implement.
+}

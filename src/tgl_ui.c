@@ -73,7 +73,7 @@ tgl_renderui(tgl_ui_t const *u)
 				TGL_LABELTEXTCOLOR
 			);
 		}
-		else // button.
+		else if (u->elems[i].any.type == TGL_BUTTON)
 		{
 			tgl_color_t bcol = TGL_BUTTONCOLOR, tcol = TGL_BUTTONTEXTCOLOR;
 			if (mx >= x && my >= y && mx < x + w && my < y + h)
@@ -99,6 +99,10 @@ tgl_renderui(tgl_ui_t const *u)
 				u->elems[i].button.text,
 				tcol
 			);
+		}
+		else // slider.
+		{
+			// TODO: implement.
 		}
 	}
 }
@@ -178,4 +182,10 @@ tgl_uibutton(tgl_ui_t *u, char const *text)
 	u->y += h;
 	
 	return state;
+}
+
+bool
+tgl_uislider(tgl_ui_t *u, char const *text, float *inoutval)
+{
+	// TODO: implement.
 }

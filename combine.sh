@@ -16,6 +16,12 @@ cat src/prelude.c >> $OUTFILE
 echo "[$0] combine: add input (tgl_input.c)" >&2
 cat src/tgl_input.c >> $OUTFILE
 
+echo "[$0] combine: add options (tgl_options.c)" >&2
+cat src/tgl_options.c >> $OUTFILE
+
+echo "[$0] combine: add pack (tgl_pack.c)" >&2
+cat src/tgl_pack.c >> $OUTFILE
+
 echo "[$0] combine: add ui (tgl_ui.c)" >&2
 cat src/tgl_ui.c >> $OUTFILE
 
