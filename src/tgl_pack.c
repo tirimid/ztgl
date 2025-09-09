@@ -37,7 +37,13 @@ tgl_packadd(tgl_pack_t *p, tgl_res_t const *r)
 }
 
 int32_t
-tgl_packrm(tgl_pack_t *p, tgl_restype_t type, uint32_t which)
+tgl_packinsert(tgl_pack_t *p, tgl_res_t const *r, uint32_t idx)
+{
+	// TODO: implement.
+}
+
+int32_t
+tgl_packrm(tgl_pack_t *p, tgl_restype_t type, uint32_t idx)
 {
 	// TODO: implement.
 }
@@ -53,3 +59,8 @@ tgl_packfind(
 	// TODO: implement.
 }
 
+void
+tgl_packranges(tgl_pack_t *p)
+{
+	// TODO: implement.
+}

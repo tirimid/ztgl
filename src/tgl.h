@@ -66,7 +66,10 @@ typedef enum tgl_color
 	TGL_SLIDERHOVERCOLOR,
 	TGL_SLIDERBARCOLOR,
 	TGL_SLIDERBARPRESSCOLOR,
-	TGL_SLIDERBARHOVERCOLOR
+	TGL_SLIDERBARHOVERCOLOR,
+	TGL_SLIDERTEXTCOLOR,
+	TGL_SLIDERTEXTPRESSCOLOR,
+	TGL_SLIDERTEXTHOVERCOLOR
 } tgl_color_t;
 
 typedef enum tgl_uitype
@@ -213,8 +216,10 @@ void tgl_writepack(uint8_t outbuf[], size_t *outsize, tgl_pack_t const *p);
 int32_t tgl_writepackfile(FILE *fp, tgl_pack_t const *p);
 void tgl_destroypack(tgl_pack_t *p);
 int32_t tgl_packadd(tgl_pack_t *p, tgl_res_t const *r);
-int32_t tgl_packrm(tgl_pack_t *p, tgl_restype_t type, uint32_t which);
+int32_t tgl_packinsert(tgl_pack_t *p, tgl_res_t const *r, uint32_t idx);
+int32_t tgl_packrm(tgl_pack_t *p, tgl_restype_t type, uint32_t idx);
 bool tgl_packfind(uint32_t *out, tgl_pack_t const *p, tgl_restype_t type, char const *name);
+void tgl_packranges(tgl_pack_t *p);
 
 // ui.
 tgl_ui_t tgl_beginui(tgl_uielem_t elems[], size_t elemcap, int32_t x, int32_t y, TTF_Font *font, SDL_Window const *wnd);

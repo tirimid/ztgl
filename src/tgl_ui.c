@@ -102,7 +102,34 @@ tgl_renderui(tgl_ui_t const *u)
 		}
 		else // slider.
 		{
-			// TODO: implement.
+			tgl_color_t scol = TGL_SLIDERCOLOR;
+			tgl_color_t tcol = TGL_SLIDERTEXTCOLOR;
+			tgl_color_t bcol = TGL_SLIDERBARCOLOR;
+			if (mx >= x && my >= y && mx < x + w && my < y + h)
+			{
+				if (tgl_mdown(SDL_BUTTON_LEFT))
+				{
+					scol = TGL_SLIDERPRESSCOLOR;
+					tcol = TGL_SLIDERTEXTPRESSCOLOR;
+					bcol = TGL_SLIDERBARPRESSCOLOR;
+				}
+				else
+				{
+					scol = TGL_SLIDERHOVERCOLOR;
+					tcol = TGL_SLIDERTEXTPRESSCOLOR;
+					bcol = TGL_SLIDERBARHOVERCOLOR;
+				}
+			}
+			
+			tgl_conf.renderrect(x, y, w, h, scol);
+			tgl_conf.renderrect(x, y, *u->elems[i].slider.inoutval * w, h, bcol);
+			tgl_conf.rendertext(
+				x + pad,
+				y + pad,
+				w - 2 * pad,
+				h - 2 * pad,
+				u->elems[i].slider.text,
+				tcol
 		}
 	}
 }
@@ -187,5 +214,48 @@ tgl_uibutton(tgl_ui_t *u, char const *text)
 bool
 tgl_uislider(tgl_ui_t *u, char const *text, float *inoutval)
 {
-	// TODO: implement.
+	if (u->nelems >= u->elemcap)
+	{
+		return false;
+	}
+	
+	bool state = false;
+	
+	int32_t w, h;
+	TTF_SizeText(u->font, text, &w, &h);
+	w += 2 * tgl_conf.uipad;
+	h += 2 * tgl_conf.uipad;
+	
+	int32_t mx, my;
+	tgl_mpos(u->wnd, &mx, &my);
+	
+	if (tgl_mreleased(SDL_BUTTON_LEFT)
+		&& mx >= u->x
+		&& my >= u->y
+		&& mx < u->x + w
+		&& my < u->y + h)
+	{
+		*inoutval = (double)(mx - u->x) / w;
+		state = true;
+	}
+	
+	*inoutval = *inoutval < 0.0f ? 0.0f : *val;
+	*inoutval = *inoutval > 1.0f ? 1.0f : *val;
+	
+	u->elems[u->nelems++] = (tgl_uielem_t)
+	{
+		.slider =
+		{
+			.type = TGL_SLIDER,
+			.x = u->x,
+			.y = u->y,
+			.w = w,
+			.h = h,
+			.text = text,
+			.inoutval = inoutval
+		}
+	};
+	u->y += h;
+	
+	return state;
 }
