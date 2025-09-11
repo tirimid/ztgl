@@ -126,8 +126,8 @@ typedef struct tgl_conf
 typedef struct tgl_tfdata
 {
 	char *buf;
-	uint32_t buflen, bufcap;
-	uint32_t csr, start;
+	uint32_t len, cap;
+	uint32_t csr, first;
 	bool sel;
 } tgl_tfdata_t;
 
@@ -222,6 +222,12 @@ typedef struct tgl_reallocbatch
 //-----------------------//
 
 extern tgl_conf_t tgl_conf; // should be set before library use.
+
+//-------------//
+// data tables //
+//-------------//
+
+extern uint8_t tgl_defaultcolors[][4];
 
 //------------//
 // procedures //

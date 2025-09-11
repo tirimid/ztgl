@@ -1,13 +1,13 @@
 #!/bin/bash
 
 INCLUDE=""
-DEFINES=""
+DEFINES="-DTGL_IMPLEMENTATION"
 WARNINGS="-Wall -Wextra -Wshadow"
 LIBRARIES="$(pkg-config --cflags sdl2)"
 CFLAGS="-std=c99 -pedantic"
 
 CC=gcc
-CFLAGS_FULL="$INCLUDE $DEFINES $WARNINGS $CFLAGS $DEFINES $LIBRARIES"
+CFLAGS_FULL="$INCLUDE $DEFINES $WARNINGS $CFLAGS $LIBRARIES"
 
 echo "[$0] test-build: copying" >&2
 cp tgl.h tgl.c

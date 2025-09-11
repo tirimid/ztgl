@@ -130,6 +130,7 @@ tgl_renderui(tgl_ui_t const *u)
 				h - 2 * pad,
 				u->elems[i].slider.text,
 				tcol
+			);
 		}
 		else // textfield.
 		{
@@ -141,21 +142,53 @@ tgl_renderui(tgl_ui_t const *u)
 			{
 				if (tgl_mdown(SDL_BUTTON_LEFT))
 				{
-					tfcol = TGLTEXTFIELDPRESSCOLOR;
-					tftcol = TGLTEXTFIELDTEXTPRESSCOLOR;
-					tfbcol = TGLTEXTFIELDBARPRESSCOLOR;
-					tfpcol = TGLTEXTFIELDPROMPTPRESSCOLOR;
+					tfcol = TGL_TEXTFIELDPRESSCOLOR;
+					tftcol = TGL_TEXTFIELDTEXTPRESSCOLOR;
+					tfbcol = TGL_TEXTFIELDBARPRESSCOLOR;
+					tfpcol = TGL_TEXTFIELDPROMPTPRESSCOLOR;
 				}
 				else
 				{
-					tfcol = TGLTEXTFIELDHOVERCOLOR;
-					tftcol = TGLTEXTFIELDTEXTHOVERCOLOR;
-					tfbcol = TGLTEXTFIELDBARHOVERCOLOR;
-					tfpcol = TGLTEXTFIELDPROMPTHOVERCOLOR;
+					tfcol = TGL_TEXTFIELDHOVERCOLOR;
+					tftcol = TGL_TEXTFIELDTEXTHOVERCOLOR;
+					tfbcol = TGL_TEXTFIELDBARHOVERCOLOR;
+					tfpcol = TGL_TEXTFIELDPROMPTHOVERCOLOR;
 				}
 			}
 			
-			// TODO: implement.
+			tgl_conf.renderrect(x, y, w, h, tfcol);
+			
+			tgl_tfdata_t const *t = u->elems[i].textfield.tfdata;
+			int32_t chw = (w - 2 * pad) / u->elems[i].textfield.ndraw;
+			int32_t chh = h - 2 * pad;
+			
+			char const *text = t->len ? t->buf : u->elems[i].textfield.text;
+			uint32_t textfirst = t->len ? t->first : 0;
+			uint32_t textlen = t->len ? t->len : strlen(text);
+			tgl_color_t textcol = t->len ? tftcol : tfpcol;
+			
+			int32_t dx = 0;
+			for (uint32_t j = textfirst; j < textlen; ++j)
+			{
+				if (dx >= w - 2 * pad)
+				{
+					break;
+				}
+				char render[] = {text[j], 0};
+				tgl_conf.rendertext(x + pad + dx, y + pad, chw, chh, render, textcol);
+				dx += chw;
+			}
+			
+			if (t->sel)
+			{
+				tgl_conf.renderrect(
+					x + pad + (t->csr - t->first) * chw,
+					y + pad,
+					tgl_conf.uitextfieldbar,
+					chh,
+					tfbcol
+				);
+			}
 		}
 	}
 }
@@ -297,16 +330,16 @@ tgl_uitextfield(
 {
 	if (u->nelems >= u->elemcap)
 	{
-		return false;
+		return;
 	}
 	
 	int32_t chw, chh;
 	TTF_SizeText(u->font, " ", &chw, &chh);
 	
-	int32_t w = ndraw * chw + 2 * u->uipad;
-	int32_t h = chh + 2 * u->uipad;
+	int32_t w = ndraw * chw + 2 * tgl_conf.uipad;
+	int32_t h = chh + 2 * tgl_conf.uipad;
 	
-	if (tgl_mreleased(SDL_LEFT))
+	if (tgl_mreleased(SDL_BUTTON_LEFT))
 	{
 		int32_t mx, my;
 		tgl_mpos(u->wnd, &mx, &my);
@@ -351,7 +384,48 @@ tgl_uitextfield(
 			}
 		}
 		
-		// TODO: handle text input.
+		for (uint8_t i = 0; i < 128; ++i)
+		{
+			if (tfdata->len >= tfdata->cap + 1)
+			{
+				break;
+			}
+			
+			if (!isprint(i))
+			{
+				continue;
+			}
+			
+			if (tgl_textinput(i))
+			{
+				memmove(
+					&tfdata->buf[tfdata->csr + 1],
+					&tfdata->buf[tfdata->csr],
+					tfdata->len - tfdata->csr
+				);
+				
+				++tfdata->csr;
+				tfdata->first += tfdata->csr - tfdata->first >= ndraw;
+				tfdata->buf[tfdata->csr - 1] = i;
+				++tfdata->len;
+				tfdata->buf[tfdata->len] = 0;
+			}
+		}
+		
+		if (tgl_kpressed(SDLK_BACKSPACE) && tfdata->csr)
+		{
+			memmove(
+				&tfdata->buf[tfdata->csr - 1],
+				&tfdata->buf[tfdata->csr],
+				tfdata->len - tfdata->csr
+			);
+			
+			--tfdata->csr;
+			tfdata->first -= tfdata->csr < tfdata->first;
+			
+			--tfdata->len;
+			tfdata->buf[tfdata->len] = 0;
+		}
 	}
 	
 	u->elems[u->nelems++] = (tgl_uielem_t)
@@ -364,7 +438,7 @@ tgl_uitextfield(
 			.w = w,
 			.h = h,
 			.text = text,
-			.tfdata = &tfdata,
+			.tfdata = tfdata,
 			.ndraw = ndraw
 		}
 	};
