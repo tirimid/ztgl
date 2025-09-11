@@ -100,7 +100,7 @@ tgl_renderui(tgl_ui_t const *u)
 				tcol
 			);
 		}
-		else // slider.
+		else if (u->elems[i].any.type == TGL_SLIDER)
 		{
 			tgl_color_t scol = TGL_SLIDERCOLOR;
 			tgl_color_t tcol = TGL_SLIDERTEXTCOLOR;
@@ -122,7 +122,7 @@ tgl_renderui(tgl_ui_t const *u)
 			}
 			
 			tgl_conf.renderrect(x, y, w, h, scol);
-			tgl_conf.renderrect(x, y, *u->elems[i].slider.inoutval * w, h, bcol);
+			tgl_conf.renderrect(x, y, u->elems[i].slider.val * w, h, bcol);
 			tgl_conf.rendertext(
 				x + pad,
 				y + pad,
@@ -130,6 +130,32 @@ tgl_renderui(tgl_ui_t const *u)
 				h - 2 * pad,
 				u->elems[i].slider.text,
 				tcol
+		}
+		else // textfield.
+		{
+			tgl_color_t tfcol = TGL_TEXTFIELDCOLOR;
+			tgl_color_t tftcol = TGL_TEXTFIELDTEXTCOLOR;
+			tgl_color_t tfbcol = TGL_TEXTFIELDBARCOLOR;
+			tgl_color_t tfpcol = TGL_TEXTFIELDPROMPTCOLOR;
+			if (mx >= x && my >= y && mx < x + w && my < y + h)
+			{
+				if (tgl_mdown(SDL_BUTTON_LEFT))
+				{
+					tfcol = TGLTEXTFIELDPRESSCOLOR;
+					tftcol = TGLTEXTFIELDTEXTPRESSCOLOR;
+					tfbcol = TGLTEXTFIELDBARPRESSCOLOR;
+					tfpcol = TGLTEXTFIELDPROMPTPRESSCOLOR;
+				}
+				else
+				{
+					tfcol = TGLTEXTFIELDHOVERCOLOR;
+					tftcol = TGLTEXTFIELDTEXTHOVERCOLOR;
+					tfbcol = TGLTEXTFIELDBARHOVERCOLOR;
+					tfpcol = TGLTEXTFIELDPROMPTHOVERCOLOR;
+				}
+			}
+			
+			// TODO: implement.
 		}
 	}
 }
@@ -212,7 +238,7 @@ tgl_uibutton(tgl_ui_t *u, char const *text)
 }
 
 bool
-tgl_uislider(tgl_ui_t *u, char const *text, float *inoutval)
+tgl_uislider(tgl_ui_t *u, char const *text, TGL_INOUT float *val)
 {
 	if (u->nelems >= u->elemcap)
 	{
@@ -235,12 +261,12 @@ tgl_uislider(tgl_ui_t *u, char const *text, float *inoutval)
 		&& mx < u->x + w
 		&& my < u->y + h)
 	{
-		*inoutval = (double)(mx - u->x) / w;
+		*val = (double)(mx - u->x) / w;
 		state = true;
 	}
 	
-	*inoutval = *inoutval < 0.0f ? 0.0f : *val;
-	*inoutval = *inoutval > 1.0f ? 1.0f : *val;
+	*val = *val < 0.0f ? 0.0f : *val;
+	*val = *val > 1.0f ? 1.0f : *val;
 	
 	u->elems[u->nelems++] = (tgl_uielem_t)
 	{
@@ -252,10 +278,95 @@ tgl_uislider(tgl_ui_t *u, char const *text, float *inoutval)
 			.w = w,
 			.h = h,
 			.text = text,
-			.inoutval = inoutval
+			.val = *val
 		}
 	};
 	u->y += h;
 	
 	return state;
+}
+
+// function assumes that the user is rendering UI with a monospacing font.
+void
+tgl_uitextfield(
+	tgl_ui_t *u,
+	char const *text,
+	TGL_INOUT tgl_tfdata_t *tfdata,
+	uint32_t ndraw
+)
+{
+	if (u->nelems >= u->elemcap)
+	{
+		return false;
+	}
+	
+	int32_t chw, chh;
+	TTF_SizeText(u->font, " ", &chw, &chh);
+	
+	int32_t w = ndraw * chw + 2 * u->uipad;
+	int32_t h = chh + 2 * u->uipad;
+	
+	if (tgl_mreleased(SDL_LEFT))
+	{
+		int32_t mx, my;
+		tgl_mpos(u->wnd, &mx, &my);
+		
+		if (mx >= u->x && my >= u->y && mx < u->x + w && my < u->y + h)
+		{
+			tfdata->sel = true;
+		}
+		else
+		{
+			tfdata->sel = false;
+		}
+	}
+	
+	if (tfdata->sel)
+	{
+		if (tgl_kpressed(SDLK_LEFT))
+		{
+			tfdata->csr -= tfdata->csr > 0;
+			tfdata->first -= tfdata->csr < tfdata->first;
+		}
+		
+		if (tgl_kpressed(SDLK_RIGHT))
+		{
+			tfdata->csr += tfdata->csr < tfdata->len;
+			tfdata->first += tfdata->csr - tfdata->first >= ndraw;
+		}
+		
+		if (tgl_kpressed(SDLK_UP))
+		{
+			tfdata->csr = 0;
+			tfdata->first = 0;
+		}
+		
+		if (tgl_kpressed(SDLK_DOWN))
+		{
+			tfdata->csr = tfdata->len;
+			tfdata->first = 0;
+			while (tfdata->csr - tfdata->first > ndraw)
+			{
+				++tfdata->first;
+			}
+		}
+		
+		// TODO: handle text input.
+	}
+	
+	u->elems[u->nelems++] = (tgl_uielem_t)
+	{
+		.textfield =
+		{
+			.type = TGL_TEXTFIELD,
+			.x = u->x,
+			.y = u->y,
+			.w = w,
+			.h = h,
+			.text = text,
+			.tfdata = &tfdata,
+			.ndraw = ndraw
+		}
+	};
+	u->y += h;
 }

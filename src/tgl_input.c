@@ -8,6 +8,9 @@ static uint8_t tgl_kpressstates[1024 / 8], tgl_kreleasestates[1024 / 8];
 static bool tgl_mdownstates[5];
 static bool tgl_mpressstates[5], tgl_mreleasestates[5];
 
+// TGL supports ASCII text input.
+static uint8_t tgl_textinputstates[128 / 8];
+
 void
 tgl_handleinput(SDL_Event const *e)
 {
@@ -55,6 +58,19 @@ tgl_handleinput(SDL_Event const *e)
 			tgl_mreleasestates[e->button.button] = true;
 		}
 	}
+	else if (e->type == SDL_TEXTINPUT)
+	{
+		uint8_t ch = e->text.text[0];
+		
+		// disregard non-ASCII input.
+		if (ch & 0x80)
+		{
+			return;
+		}
+		
+		size_t byte = ch / 8, bit = ch % 8;
+		tgl_textinputstates[byte] |= 1 << bit;
+	}
 }
 
 void
@@ -64,6 +80,7 @@ tgl_prepareinput(void)
 	memset(tgl_kreleasestates, 0, sizeof(tgl_kreleasestates));
 	memset(tgl_mpressstates, 0, sizeof(tgl_mpressstates));
 	memset(tgl_mreleasestates, 0, sizeof(tgl_mreleasestates));
+	memset(tgl_textinputstates, 0, sizeof(tgl_textinputstates));
 }
 
 bool
@@ -103,16 +120,16 @@ tgl_kreleased(SDL_Keycode k)
 }
 
 void
-tgl_mpos(SDL_Window const *wnd, int32_t *outx, int32_t *outy)
+tgl_mpos(SDL_Window const *wnd, TGL_OUT int32_t *x, TGL_OUT int32_t *y)
 {
 	if (SDL_GetMouseFocus() != wnd)
 	{
-		*outx = 0;
-		*outy = 0;
+		*x = 0;
+		*y = 0;
 		return;
 	}
 	
-	SDL_GetMouseState(outx, outy);
+	SDL_GetMouseState(x, y);
 }
 
 bool
@@ -131,4 +148,11 @@ bool
 tgl_mreleased(int32_t btn)
 {
 	return tgl_mreleasestates[btn];
+}
+
+bool
+tgl_textinput(char ch)
+{
+	size_t byte = ch / 8, bit = ch % 8;
+	return tgl_textinputstates[byte] & 1 << bit;
 }

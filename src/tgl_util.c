@@ -48,9 +48,9 @@ tgl_endtick(void)
 }
 
 void
-tgl_begintimer(uint64_t *outtimer)
+tgl_begintimer(TGL_OUT uint64_t *timer)
 {
-	*outtimer = tgl_unixus();
+	*timer = tgl_unixus();
 }
 
 void
@@ -92,13 +92,13 @@ tgl_d2r(float d)
 }
 
 void *
-tgl_allocbatch(tgl_allocbatch_t *allocs, size_t nallocs)
+tgl_allocbatch(TGL_INOUT tgl_allocbatch_t *allocs, size_t nallocs)
 {
 	// TODO: implement.
 }
 
 void *
-tgl_reallocbatch(tgl_reallocbatch_t *reallocs, size_t nreallocs)
+tgl_reallocbatch(TGL_INOUT tgl_reallocbatch_t *reallocs, size_t nreallocs)
 {
 	// TODO: implement.
 }

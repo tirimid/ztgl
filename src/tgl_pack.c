@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 int32_t
-tgl_readpack(tgl_pack_t *out, uint8_t *pack, size_t size)
+tgl_readpack(TGL_OUT tgl_pack_t *p, uint8_t *pack, size_t size)
 {
 	// TODO: implement.
 }
 
 int32_t
-tgl_readpackfile(tgl_pack_t *out, FILE *fp)
+tgl_readpackfile(TGL_OUT tgl_pack_t *p, FILE *fp)
 {
 	// TODO: implement.
 }
 
 void
-tgl_writepack(uint8_t outbuf[], size_t *outsize, tgl_pack_t const *p)
+tgl_writepack(TGL_OUT uint8_t buf[], TGL_OUT size_t *size, tgl_pack_t const *p)
 {
 	// TODO: implement.
 }
@@ -50,7 +50,7 @@ tgl_packrm(tgl_pack_t *p, tgl_restype_t type, uint32_t idx)
 
 bool
 tgl_packfind(
-	uint32_t *out,
+	TGL_OUT uint32_t *idx,
 	tgl_pack_t const *p,
 	tgl_restype_t type,
 	char const *name

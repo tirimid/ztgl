@@ -47,6 +47,10 @@
 #define TGL_MAXOPTIONVALUE 127
 #define TGL_OPTIONSCAN "%127s = %127[^\r\n]"
 
+// clarity.
+#define TGL_OUT
+#define TGL_INOUT
+
 //--------------------//
 // enumeration values //
 //--------------------//
@@ -69,14 +73,27 @@ typedef enum tgl_color
 	TGL_SLIDERBARHOVERCOLOR,
 	TGL_SLIDERTEXTCOLOR,
 	TGL_SLIDERTEXTPRESSCOLOR,
-	TGL_SLIDERTEXTHOVERCOLOR
+	TGL_SLIDERTEXTHOVERCOLOR,
+	TGL_TEXTFIELDCOLOR,
+	TGL_TEXTFIELDPRESSCOLOR,
+	TGL_TEXTFIELDHOVERCOLOR,
+	TGL_TEXTFIELDTEXTCOLOR,
+	TGL_TEXTFIELDTEXTPRESSCOLOR,
+	TGL_TEXTFIELDTEXTHOVERCOLOR,
+	TGL_TEXTFIELDBARCOLOR,
+	TGL_TEXTFIELDBARPRESSCOLOR,
+	TGL_TEXTFIELDBARHOVERCOLOR,
+	TGL_TEXTFIELDPROMPTCOLOR,
+	TGL_TEXTFIELDPROMPTPRESSCOLOR,
+	TGL_TEXTFIELDPROMPTHOVERCOLOR
 } tgl_color_t;
 
 typedef enum tgl_uitype
 {
 	TGL_LABEL = 0,
 	TGL_BUTTON,
-	TGL_SLIDER
+	TGL_SLIDER,
+	TGL_TEXTFIELD
 } tgl_uitype_t;
 
 typedef enum tgl_restype
@@ -99,11 +116,20 @@ typedef struct tgl_conf
 	char const *errtitle;
 	uint64_t tickus;
 	int32_t uipad;
+	int32_t uitextfieldbar;
 	
 	// rendering call config.
 	void (*renderrect)(int32_t, int32_t, int32_t, int32_t, tgl_color_t);
 	void (*rendertext)(int32_t, int32_t, int32_t, int32_t, char const *, tgl_color_t);
 } tgl_conf_t;
+
+typedef struct tgl_tfdata
+{
+	char *buf;
+	uint32_t buflen, bufcap;
+	uint32_t csr, start;
+	bool sel;
+} tgl_tfdata_t;
 
 typedef union tgl_uielem
 {
@@ -137,8 +163,18 @@ typedef union tgl_uielem
 		int32_t x, y;
 		int32_t w, h;
 		char const *text;
-		float *val;
+		float val;
 	} slider;
+	
+	struct
+	{
+		uint8_t type;
+		int32_t x, y;
+		int32_t w, h;
+		char const *text;
+		tgl_tfdata_t const *tfdata;
+		uint32_t ndraw;
+	} textfield;
 } tgl_uielem_t;
 
 typedef struct tgl_ui
@@ -197,28 +233,29 @@ void tgl_prepareinput(void);
 bool tgl_kdown(SDL_Keycode k);
 bool tgl_kpressed(SDL_Keycode k);
 bool tgl_kreleased(SDL_Keycode k);
-void tgl_mpos(SDL_Window const *wnd, int32_t *outx, int32_t *outy);
+void tgl_mpos(SDL_Window const *wnd, TGL_OUT int32_t *x, TGL_OUT int32_t *y);
 bool tgl_mdown(int32_t btn);
 bool tgl_mpressed(int32_t btn);
 bool tgl_mreleased(int32_t btn);
+bool tgl_textinput(char ch);
 
 // options.
-int32_t tgl_optraw(char out[], FILE *fp, char const *key);
-int32_t tgl_optkeycode(SDL_Keycode *out, FILE *fp, char const *key);
-int32_t tgl_optfloat(double *out, FILE *fp, char const *key);
-int32_t tgl_optint(int64_t *out, FILE *fp, char const *key);
-int32_t tgl_optbool(bool *out, FILE *fp, char const *key);
+int32_t tgl_optraw(TGL_OUT char buf[], FILE *fp, char const *key);
+int32_t tgl_optkeycode(TGL_OUT SDL_Keycode *k, FILE *fp, char const *key);
+int32_t tgl_optfloat(TGL_OUT double *f, FILE *fp, char const *key);
+int32_t tgl_optint(TGL_OUT int64_t *i, FILE *fp, char const *key);
+int32_t tgl_optbool(TGL_OUT bool *b, FILE *fp, char const *key);
 
 // pack.
-int32_t tgl_readpack(tgl_pack_t *out, uint8_t *pack, size_t size);
-int32_t tgl_readpackfile(tgl_pack_t *out, FILE *fp);
-void tgl_writepack(uint8_t outbuf[], size_t *outsize, tgl_pack_t const *p);
+int32_t tgl_readpack(TGL_OUT tgl_pack_t *p, uint8_t *pack, size_t size);
+int32_t tgl_readpackfile(TGL_OUT tgl_pack_t *p, FILE *fp);
+void tgl_writepack(TGL_OUT uint8_t buf[], TGL_OUT size_t *size, tgl_pack_t const *p);
 int32_t tgl_writepackfile(FILE *fp, tgl_pack_t const *p);
 void tgl_destroypack(tgl_pack_t *p);
 int32_t tgl_packadd(tgl_pack_t *p, tgl_res_t const *r);
 int32_t tgl_packinsert(tgl_pack_t *p, tgl_res_t const *r, uint32_t idx);
 int32_t tgl_packrm(tgl_pack_t *p, tgl_restype_t type, uint32_t idx);
-bool tgl_packfind(uint32_t *out, tgl_pack_t const *p, tgl_restype_t type, char const *name);
+bool tgl_packfind(TGL_OUT uint32_t *idx, tgl_pack_t const *p, tgl_restype_t type, char const *name);
 void tgl_packranges(tgl_pack_t *p);
 
 // ui.
@@ -227,20 +264,21 @@ void tgl_renderui(tgl_ui_t const *u);
 void tgl_uipad(tgl_ui_t *u, int32_t dx, int32_t dy);
 void tgl_uilabel(tgl_ui_t *u, char const *text);
 bool tgl_uibutton(tgl_ui_t *u, char const *text);
-bool tgl_uislider(tgl_ui_t *u, char const *text, float *inoutval);
+bool tgl_uislider(tgl_ui_t *u, char const *text, TGL_INOUT float *val);
+void tgl_uitextfield(tgl_ui_t *u, char const *text, TGL_INOUT tgl_tfdata_t *tfdata, uint32_t ndraw);
 
 // util.
 void tgl_err(char const *fmt, ...);
 uint64_t tgl_unixus(void);
 void tgl_begintick(void);
 void tgl_endtick(void);
-void tgl_begintimer(uint64_t *outtimer);
+void tgl_begintimer(TGL_OUT uint64_t *timer);
 void tgl_endtimer(uint64_t timer, char const *name);
 float tgl_interpangle(float a, float b, float t);
 float tgl_shortestangle(float a, float b);
 float tgl_r2d(float r);
 float tgl_d2r(float d);
-void *tgl_allocbatch(tgl_allocbatch_t *allocs, size_t nallocs);
-void *tgl_reallocbatch(tgl_reallocbatch_t *reallocs, size_t nreallocs);
+void *tgl_allocbatch(TGL_INOUT tgl_allocbatch_t *allocs, size_t nallocs);
+void *tgl_reallocbatch(TGL_INOUT tgl_reallocbatch_t *reallocs, size_t nreallocs);
 
 #endif
