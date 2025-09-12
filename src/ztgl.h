@@ -25,8 +25,10 @@
 // macros //
 //--------//
 
+#ifndef Z_NOGLOBAL
 #define OUT
 #define INOUT
+#endif
 
 // profiling.
 #ifdef Z_PROFILE
@@ -54,7 +56,7 @@
 // type aliases //
 //--------------//
 
-#ifndef Z_NOALIAS
+#ifndef Z_NOGLOBAL
 
 typedef int8_t i8;
 typedef int16_t i16;
