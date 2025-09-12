@@ -46,8 +46,8 @@
 // library data constants.
 #define Z_MAXRESNAME 15
 #define Z_BATCHALIGN 16
-#define Z_MAXOPTIONKEY 127
-#define Z_MAXOPTIONVALUE 127
+#define Z_MAXOPTIONKEY 128
+#define Z_MAXOPTIONVALUE 128
 #define Z_OPTIONSCAN "%127s = %127[^\r\n]"
 
 //--------------//
@@ -75,6 +75,14 @@ typedef double f64;
 //--------------------//
 // enumeration values //
 //--------------------//
+
+typedef enum z_err
+{
+	Z_OK = 0,
+	Z_NOTFOUND,
+	Z_INVALIDFORMAT,
+	Z_INVALIDCONVERSION
+} z_err_t;
 
 typedef enum z_color
 {
@@ -267,11 +275,11 @@ bool z_mreleased(i32 btn);
 bool z_textinput(char ch);
 
 // options.
-i32 z_optraw(OUT char buf[], FILE *fp, char const *key);
-i32 z_optkeycode(OUT SDL_Keycode *k, FILE *fp, char const *key);
-i32 z_optfloat(OUT f64 *f, FILE *fp, char const *key);
-i32 z_optint(OUT i64 *i, FILE *fp, char const *key);
-i32 z_optbool(OUT bool *b, FILE *fp, char const *key);
+z_err_t z_optraw(OUT char buf[], FILE *fp, char const *key);
+z_err_t z_optkeycode(OUT SDL_Keycode *k, FILE *fp, char const *key);
+z_err_t z_optfloat(OUT f64 *f, FILE *fp, char const *key);
+z_err_t z_optint(OUT i64 *i, FILE *fp, char const *key);
+z_err_t z_optbool(OUT bool *b, FILE *fp, char const *key);
 
 // pack.
 i32 z_readpack(OUT z_pack_t *p, u8 *pack, usize size);
