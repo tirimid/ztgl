@@ -95,10 +95,14 @@ void *
 z_allocbatch(INOUT z_allocbatch_t *allocs, usize nallocs)
 {
 	// TODO: implement.
+	(void)allocs, (void)nallocs;
+	__builtin_unreachable();
 }
 
 void *
 z_reallocbatch(INOUT z_reallocbatch_t *reallocs, usize nreallocs)
 {
 	// TODO: implement.
+	(void)reallocs, (void)nreallocs;
+	__builtin_unreachable();
 }
