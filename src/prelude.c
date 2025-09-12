@@ -10,9 +10,9 @@
 // system dependencies.
 #include <sys/time.h>
 
-tgl_conf_t tgl_conf;
+z_conf_t z_conf;
 
-uint8_t tgl_defaultcolors[][4] =
+u8 z_defaultcolors[][4] =
 {
 	{0, 0, 0, 128}, // panel.
 	{255, 255, 255, 255}, // label text.

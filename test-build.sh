@@ -1,7 +1,7 @@
 #!/bin/bash
 
 INCLUDE=""
-DEFINES="-DTGL_IMPLEMENTATION"
+DEFINES="-DZ_IMPLEMENTATION"
 WARNINGS="-Wall -Wextra -Wshadow"
 LIBRARIES="$(pkg-config --cflags sdl2)"
 CFLAGS="-std=c99 -pedantic"
@@ -10,10 +10,10 @@ CC=gcc
 CFLAGS_FULL="$INCLUDE $DEFINES $WARNINGS $CFLAGS $LIBRARIES"
 
 echo "[$0] test-build: copying" >&2
-cp tgl.h tgl.c
+cp ztgl.h ztgl.c
 
 echo "[$0] test-build: compilation" >&2
-$CC -o tgl.o -c tgl.c $CFLAGS_FULL
+$CC -o ztgl.o -c ztgl.c $CFLAGS_FULL
 if [ $? -ne 0 ]
 then
 	echo "[$0] test-build: failed to compile!" >&2
