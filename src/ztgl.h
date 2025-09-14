@@ -18,7 +18,7 @@
 //--------------------------//
 
 #define Z_VERMAJOR 1
-#define Z_VERMINOR 2
+#define Z_VERMINOR 3
 #define Z_VERPATCH 0
 
 //--------//
@@ -116,8 +116,14 @@ typedef enum z_color
 	Z_TEXTFIELDBARHOVERCOLOR,
 	Z_TEXTFIELDPROMPTCOLOR,
 	Z_TEXTFIELDPROMPTPRESSCOLOR,
-	Z_TEXTFIELDPROMPTHOVERCOLOR
+	Z_TEXTFIELDPROMPTHOVERCOLOR,
+	Z_INACTIVECOLOR
 } z_color_t;
+
+typedef enum z_uiflag
+{
+	Z_INACTIVE = 0x1
+} z_uiflag_t;
 
 typedef enum z_uitype
 {
@@ -168,6 +174,7 @@ typedef union z_uielem
 	struct
 	{
 		u8 type;
+		u16 flags;
 		i32 x, y;
 		i32 w, h;
 	} any;
@@ -175,6 +182,7 @@ typedef union z_uielem
 	struct
 	{
 		u8 type;
+		u16 flags;
 		i32 x, y;
 		i32 w, h;
 		char const *text;
@@ -183,6 +191,7 @@ typedef union z_uielem
 	struct
 	{
 		u8 type;
+		u16 flags;
 		i32 x, y;
 		i32 w, h;
 		char const *text;
@@ -191,6 +200,7 @@ typedef union z_uielem
 	struct
 	{
 		u8 type;
+		u16 flags;
 		i32 x, y;
 		i32 w, h;
 		f32 val;
@@ -200,6 +210,7 @@ typedef union z_uielem
 	struct
 	{
 		u8 type;
+		u16 flags;
 		i32 x, y;
 		i32 w, h;
 		u32 ndraw;
@@ -215,6 +226,7 @@ typedef struct z_ui
 	i32 x, y;
 	TTF_Font *font;
 	SDL_Window const *wnd;
+	bool active;
 } z_ui_t;
 
 typedef struct z_res
@@ -298,6 +310,7 @@ void z_packranges(z_pack_t *p);
 // ui.
 z_ui_t z_beginui(z_uielem_t elems[], usize elemcap, i32 x, i32 y, TTF_Font *font, SDL_Window const *wnd);
 void z_renderui(z_ui_t const *u);
+void z_uiactive(z_ui_t *u, bool active);
 void z_uipad(z_ui_t *u, i32 dx, i32 dy);
 void z_uilabel(z_ui_t *u, char const *text);
 bool z_uibutton(z_ui_t *u, char const *text);

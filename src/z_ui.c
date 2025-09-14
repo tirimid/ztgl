@@ -17,7 +17,8 @@ z_beginui(
 		.x = x,
 		.y = y,
 		.font = font,
-		.wnd = wnd
+		.wnd = wnd,
+		.active = true
 	};
 }
 
@@ -61,6 +62,12 @@ z_renderui(z_ui_t const *u)
 	{
 		i32 x = u->elems[i].any.x, y = u->elems[i].any.y;
 		i32 w = u->elems[i].any.w, h = u->elems[i].any.h;
+		
+		if (u->elems[i].any.flags & Z_INACTIVE)
+		{
+			z_conf.renderrect(x, y, w, h, Z_INACTIVECOLOR);
+			continue;
+		}
 		
 		if (u->elems[i].any.type == Z_LABEL)
 		{
@@ -195,6 +202,12 @@ z_renderui(z_ui_t const *u)
 }
 
 void
+z_uiactive(z_ui_t *u, bool active)
+{
+	u->active = active;
+}
+
+void
 z_uipad(z_ui_t *u, i32 dx, i32 dy)
 {
 	u->x += dx;
@@ -217,6 +230,7 @@ z_uilabel(z_ui_t *u, char const *text)
 		.label =
 		{
 			.type = Z_LABEL,
+			.flags = Z_INACTIVE * !u->active,
 			.x = u->x,
 			.y = u->y,
 			.w = w,
@@ -242,16 +256,19 @@ z_uibutton(z_ui_t *u, char const *text)
 	w += 2 * z_conf.uipad;
 	h += 2 * z_conf.uipad;
 	
-	i32 mx, my;
-	z_mpos(u->wnd, &mx, &my);
-	
-	if (z_mreleased(SDL_BUTTON_LEFT)
-		&& mx >= u->x
-		&& my >= u->y
-		&& mx < u->x + w
-		&& my < u->y + h)
+	if (u->active)
 	{
-		state = true;
+		i32 mx, my;
+		z_mpos(u->wnd, &mx, &my);
+		
+		if (z_mreleased(SDL_BUTTON_LEFT)
+			&& mx >= u->x
+			&& my >= u->y
+			&& mx < u->x + w
+			&& my < u->y + h)
+		{
+			state = true;
+		}
 	}
 	
 	u->elems[u->nelems++] = (z_uielem_t)
@@ -259,6 +276,7 @@ z_uibutton(z_ui_t *u, char const *text)
 		.button =
 		{
 			.type = Z_BUTTON,
+			.flags = Z_INACTIVE * !u->active,
 			.x = u->x,
 			.y = u->y,
 			.w = w,
@@ -286,27 +304,31 @@ z_uislider(z_ui_t *u, char const *text, INOUT f32 *val)
 	w += 2 * z_conf.uipad;
 	h += 2 * z_conf.uipad;
 	
-	i32 mx, my;
-	z_mpos(u->wnd, &mx, &my);
-	
-	if (z_mreleased(SDL_BUTTON_LEFT)
-		&& mx >= u->x
-		&& my >= u->y
-		&& mx < u->x + w
-		&& my < u->y + h)
+	if (u->active)
 	{
-		*val = (f64)(mx - u->x) / w;
-		state = true;
+		i32 mx, my;
+		z_mpos(u->wnd, &mx, &my);
+		
+		if (z_mreleased(SDL_BUTTON_LEFT)
+			&& mx >= u->x
+			&& my >= u->y
+			&& mx < u->x + w
+			&& my < u->y + h)
+		{
+			*val = (f64)(mx - u->x) / w;
+			state = true;
+		}
+		
+		*val = *val < 0.0f ? 0.0f : *val;
+		*val = *val > 1.0f ? 1.0f : *val;
 	}
-	
-	*val = *val < 0.0f ? 0.0f : *val;
-	*val = *val > 1.0f ? 1.0f : *val;
 	
 	u->elems[u->nelems++] = (z_uielem_t)
 	{
 		.slider =
 		{
 			.type = Z_SLIDER,
+			.flags = Z_INACTIVE * !u->active,
 			.x = u->x,
 			.y = u->y,
 			.w = w,
@@ -335,92 +357,95 @@ z_uitextfield(z_ui_t *u, char const *text, INOUT z_tfdata_t *tfdata, u32 ndraw)
 	i32 w = ndraw * chw + 2 * z_conf.uipad;
 	i32 h = chh + 2 * z_conf.uipad;
 	
-	if (z_mreleased(SDL_BUTTON_LEFT))
+	if (u->active)
 	{
-		i32 mx, my;
-		z_mpos(u->wnd, &mx, &my);
-		
-		if (mx >= u->x && my >= u->y && mx < u->x + w && my < u->y + h)
+		if (z_mreleased(SDL_BUTTON_LEFT))
 		{
-			tfdata->sel = true;
-		}
-		else
-		{
-			tfdata->sel = false;
-		}
-	}
-	
-	if (tfdata->sel)
-	{
-		if (z_kpressed(SDLK_LEFT))
-		{
-			tfdata->csr -= tfdata->csr > 0;
-			tfdata->first -= tfdata->csr < tfdata->first;
-		}
-		
-		if (z_kpressed(SDLK_RIGHT))
-		{
-			tfdata->csr += tfdata->csr < tfdata->len;
-			tfdata->first += tfdata->csr - tfdata->first >= ndraw;
-		}
-		
-		if (z_kpressed(SDLK_UP))
-		{
-			tfdata->csr = 0;
-			tfdata->first = 0;
-		}
-		
-		if (z_kpressed(SDLK_DOWN))
-		{
-			tfdata->csr = tfdata->len;
-			tfdata->first = 0;
-			while (tfdata->csr - tfdata->first > ndraw)
+			i32 mx, my;
+			z_mpos(u->wnd, &mx, &my);
+			
+			if (mx >= u->x && my >= u->y && mx < u->x + w && my < u->y + h)
 			{
-				++tfdata->first;
+				tfdata->sel = true;
+			}
+			else
+			{
+				tfdata->sel = false;
 			}
 		}
 		
-		for (u8 i = 0; i < 128; ++i)
+		if (tfdata->sel)
 		{
-			if (tfdata->len >= tfdata->cap + 1)
+			if (z_kpressed(SDLK_LEFT))
 			{
-				break;
+				tfdata->csr -= tfdata->csr > 0;
+				tfdata->first -= tfdata->csr < tfdata->first;
 			}
 			
-			if (!isprint(i))
+			if (z_kpressed(SDLK_RIGHT))
 			{
-				continue;
+				tfdata->csr += tfdata->csr < tfdata->len;
+				tfdata->first += tfdata->csr - tfdata->first >= ndraw;
 			}
 			
-			if (z_textinput(i))
+			if (z_kpressed(SDLK_UP))
+			{
+				tfdata->csr = 0;
+				tfdata->first = 0;
+			}
+			
+			if (z_kpressed(SDLK_DOWN))
+			{
+				tfdata->csr = tfdata->len;
+				tfdata->first = 0;
+				while (tfdata->csr - tfdata->first > ndraw)
+				{
+					++tfdata->first;
+				}
+			}
+			
+			for (u8 i = 0; i < 128; ++i)
+			{
+				if (tfdata->len >= tfdata->cap + 1)
+				{
+					break;
+				}
+				
+				if (!isprint(i))
+				{
+					continue;
+				}
+				
+				if (z_textinput(i))
+				{
+					memmove(
+						&tfdata->buf[tfdata->csr + 1],
+						&tfdata->buf[tfdata->csr],
+						tfdata->len - tfdata->csr
+					);
+					
+					++tfdata->csr;
+					tfdata->first += tfdata->csr - tfdata->first >= ndraw;
+					tfdata->buf[tfdata->csr - 1] = i;
+					++tfdata->len;
+					tfdata->buf[tfdata->len] = 0;
+				}
+			}
+			
+			if (z_kpressed(SDLK_BACKSPACE) && tfdata->csr)
 			{
 				memmove(
-					&tfdata->buf[tfdata->csr + 1],
+					&tfdata->buf[tfdata->csr - 1],
 					&tfdata->buf[tfdata->csr],
 					tfdata->len - tfdata->csr
 				);
 				
-				++tfdata->csr;
-				tfdata->first += tfdata->csr - tfdata->first >= ndraw;
-				tfdata->buf[tfdata->csr - 1] = i;
-				++tfdata->len;
+				--tfdata->csr;
+				tfdata->first -= tfdata->csr < tfdata->first;
+				
+				--tfdata->len;
 				tfdata->buf[tfdata->len] = 0;
 			}
-		}
-		
-		if (z_kpressed(SDLK_BACKSPACE) && tfdata->csr)
-		{
-			memmove(
-				&tfdata->buf[tfdata->csr - 1],
-				&tfdata->buf[tfdata->csr],
-				tfdata->len - tfdata->csr
-			);
-			
-			--tfdata->csr;
-			tfdata->first -= tfdata->csr < tfdata->first;
-			
-			--tfdata->len;
-			tfdata->buf[tfdata->len] = 0;
 		}
 	}
 	
@@ -429,6 +454,7 @@ z_uitextfield(z_ui_t *u, char const *text, INOUT z_tfdata_t *tfdata, u32 ndraw)
 		.textfield =
 		{
 			.type = Z_TEXTFIELD,
+			.flags = Z_INACTIVE * !u->active,
 			.x = u->x,
 			.y = u->y,
 			.w = w,

@@ -43,5 +43,6 @@ u8 z_defaultcolors[][4] =
 	{255, 255, 255, 255}, // textfield hover bar.
 	{128, 128, 128, 255}, // textfield prompt.
 	{128, 128, 128, 255}, // textfield press prompt.
-	{128, 128, 128, 255} // textfield hover prompt.
+	{128, 128, 128, 255}, // textfield hover prompt.
+	{0, 0, 0, 128} // inactive.
 };
