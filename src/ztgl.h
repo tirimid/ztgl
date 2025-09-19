@@ -52,6 +52,35 @@
 #define Z_MAXOPTIONVALUE 128
 #define Z_OPTIONSCAN "%127s = %127[^\r\n]"
 
+// resource inclusion.
+#define Z_INCXXD(name) \
+	extern u8 name[]; \
+	extern u32 name##_len;
+
+#define Z_INCRES(name) \
+	{ \
+		.data = name, \
+		.size = &name##_len \
+	}
+
+#define Z_INCSHADER(vertname, fragname) \
+	{ \
+		.vertsrc = (char *)vertname, \
+		.fragsrc = (char *)fragname, \
+		.vertlen = &vertname##_len, \
+		.fraglen = &fragname##_len \
+	}
+
+#define Z_INCGEOSHADER(geoname, vertname, fragname) \
+	{ \
+		.geosrc = (char *)geoname, \
+		.vertsrc = (char *)vertname, \
+		.fragsrc = (char *)fragname, \
+		.geolen = &geoname##_len, \
+		.vertlen = &vertname##_len, \
+		.fraglen = &fragname##_len \
+	}
+
 //--------------//
 // type aliases //
 //--------------//
@@ -160,6 +189,25 @@ typedef struct z_conf
 	void (*rendertext)(i32, i32, i32, i32, char const *, z_color_t);
 } z_conf_t;
 
+typedef struct z_res
+{
+	u8 *data;
+	u32 *size;
+} z_res_t;
+
+typedef struct z_modelres
+{
+	f32 *verts;
+	u32 *idxs;
+	u32 *nverts, *nidxs;
+} z_modelres_t;
+
+typedef struct z_shaderres
+{
+	char *geosrc, *vertsrc, *fragsrc;
+	u32 *geolen, *vertlen, *fraglen;
+} z_shaderres_t;
+
 typedef struct z_tfdata
 {
 	char *buf;
@@ -229,25 +277,6 @@ typedef struct z_ui
 	bool active;
 } z_ui_t;
 
-typedef struct z_res
-{
-	u8 type;
-	char name[Z_MAXRESNAME];
-	u32 flags;
-	u32 size;
-	u8 *data; // invalidated upon pack update.
-} z_res_t;
-
-typedef struct z_pack
-{
-	void *buf;
-	usize size;
-	u8 *data;
-	usize datasize;
-	z_res_t *images, *sounds, *models, *fonts, *maps, *others;
-	u32 nimages, nsounds, nmodels, nfonts, nmaps, nothers;
-} z_pack_t;
-
 typedef struct z_allocbatch
 {
 	void **ptr;
@@ -294,18 +323,6 @@ z_err_t z_optkeycode(OUT SDL_Keycode *k, FILE *fp, char const *key);
 z_err_t z_optfloat(OUT f64 *f, FILE *fp, char const *key);
 z_err_t z_optint(OUT i64 *i, FILE *fp, char const *key);
 z_err_t z_optbool(OUT bool *b, FILE *fp, char const *key);
-
-// pack.
-i32 z_readpack(OUT z_pack_t *p, u8 *pack, usize size);
-i32 z_readpackfile(OUT z_pack_t *p, FILE *fp);
-void z_writepack(OUT u8 buf[], OUT usize *size, z_pack_t const *p);
-i32 z_writepackfile(FILE *fp, z_pack_t const *p);
-void z_destroypack(z_pack_t *p);
-i32 z_packadd(z_pack_t *p, z_res_t const *r);
-i32 z_packinsert(z_pack_t *p, z_res_t const *r, u32 idx);
-i32 z_packrm(z_pack_t *p, z_restype_t type, u32 idx);
-bool z_packfind(OUT u32 *idx, z_pack_t const *p, z_restype_t type, char const *name);
-void z_packranges(z_pack_t *p);
 
 // ui.
 z_ui_t z_beginui(z_uielem_t elems[], usize elemcap, i32 x, i32 y, TTF_Font *font, SDL_Window const *wnd);

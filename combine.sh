@@ -19,9 +19,6 @@ cat src/z_input.c >> $OUTFILE
 echo "[$0] combine: add options (z_options.c)" >&2
 cat src/z_options.c >> $OUTFILE
 
-echo "[$0] combine: add pack (z_pack.c)" >&2
-cat src/z_pack.c >> $OUTFILE
-
 echo "[$0] combine: add ui (z_ui.c)" >&2
 cat src/z_ui.c >> $OUTFILE
 
