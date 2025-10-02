@@ -4,16 +4,16 @@ INCLUDE=""
 DEFINES="-DZ_IMPLEMENTATION"
 WARNINGS="-Wall -Wextra -Wshadow"
 LIBRARIES="$(pkg-config --cflags sdl2)"
-CFLAGS="-std=c99 -pedantic"
+FLAGS="-std=c++20 -pedantic -fno-rtti -fno-exceptions"
 
-CC=gcc
-CFLAGS_FULL="$INCLUDE $DEFINES $WARNINGS $CFLAGS $LIBRARIES"
+CPP=g++
+FLAGSFULL="$INCLUDE $DEFINES $WARNINGS $FLAGS $LIBRARIES"
 
 echo "[$0] test-build: copying" >&2
-cp ztgl.h ztgl.c
+cp ztgl.hh ztgl.cc
 
 echo "[$0] test-build: compilation" >&2
-$CC -o ztgl.o -c ztgl.c $CFLAGS_FULL
+$CPP -o ztgl.o -c ztgl.cc $FLAGSFULL
 if [ $? -ne 0 ]
 then
 	echo "[$0] test-build: failed to compile!" >&2
