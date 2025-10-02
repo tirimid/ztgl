@@ -19,7 +19,7 @@
 
 #define Z_VERMAJOR 1
 #define Z_VERMINOR 4
-#define Z_VERPATCH 0
+#define Z_VERPATCH 1
 
 //--------//
 // macros //

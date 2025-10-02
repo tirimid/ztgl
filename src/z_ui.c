@@ -456,7 +456,7 @@ z_uitextfield(z_ui_t *u, char const *text, INOUT z_tfdata_t *tfdata, u32 ndraw)
 			
 			for (u8 i = 0; i < 128; ++i)
 			{
-				if (tfdata->len >= tfdata->cap + 1)
+				if (tfdata->len + 1 >= tfdata->cap)
 				{
 					break;
 				}
