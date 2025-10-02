@@ -18,7 +18,7 @@
 //--------------------------//
 
 #define Z_VERMAJOR 1
-#define Z_VERMINOR 3
+#define Z_VERMINOR 4
 #define Z_VERPATCH 0
 
 //--------//
@@ -149,28 +149,6 @@ typedef enum z_color
 	Z_INACTIVECOLOR
 } z_color_t;
 
-typedef enum z_uiflag
-{
-	Z_INACTIVE = 0x1
-} z_uiflag_t;
-
-typedef enum z_uitype
-{
-	Z_LABEL = 0,
-	Z_BUTTON,
-	Z_SLIDER,
-	Z_TEXTFIELD
-} z_uitype_t;
-
-typedef enum z_restype
-{
-	Z_IMAGEFILE = 0,
-	Z_SOUNDFILE,
-	Z_MODELFILE,
-	Z_FONTFILE,
-	Z_MAPFILE
-} z_restype_t;
-
 //-----------------//
 // data structures //
 //-----------------//
@@ -265,16 +243,28 @@ typedef union z_uielem
 		char const *text;
 		z_tfdata_t const *tfdata;
 	} textfield;
+	
+	struct
+	{
+		u8 type;
+		u16 flags;
+		i32 x, y;
+		i32 w, h;
+		char const *text;
+	} holdbutton;
 } z_uielem_t;
 
 typedef struct z_ui
 {
 	z_uielem_t *elems;
 	usize nelems, elemcap;
-	i32 x, y;
 	TTF_Font *font;
 	SDL_Window const *wnd;
+	
+	// can safely be modified by end user.
+	i32 x, y;
 	bool active;
+	bool horizontal;
 } z_ui_t;
 
 typedef struct z_allocbatch
@@ -327,12 +317,11 @@ z_err_t z_optbool(OUT bool *b, FILE *fp, char const *key);
 // ui.
 z_ui_t z_beginui(z_uielem_t elems[], usize elemcap, i32 x, i32 y, TTF_Font *font, SDL_Window const *wnd);
 void z_renderui(z_ui_t const *u);
-void z_uiactive(z_ui_t *u, bool active);
-void z_uipad(z_ui_t *u, i32 dx, i32 dy);
 void z_uilabel(z_ui_t *u, char const *text);
 bool z_uibutton(z_ui_t *u, char const *text);
 bool z_uislider(z_ui_t *u, char const *text, INOUT f32 *val);
 void z_uitextfield(z_ui_t *u, char const *text, INOUT z_tfdata_t *tfdata, u32 ndraw);
+bool z_holdbutton(z_ui_t *u, char const *text);
 
 // util.
 void z_err(char const *fmt, ...);

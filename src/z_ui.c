@@ -1,5 +1,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+typedef enum z_uiflag
+{
+	Z_INACTIVE = 0x1
+} z_uiflag_t;
+
+typedef enum z_uitype
+{
+	Z_LABEL = 0,
+	Z_BUTTON,
+	Z_SLIDER,
+	Z_TEXTFIELD,
+	Z_HOLDBUTTON
+} z_uitype_t;
+
 z_ui_t
 z_beginui(
 	z_uielem_t elems[],
@@ -140,7 +154,7 @@ z_renderui(z_ui_t const *u)
 				tcol
 			);
 		}
-		else // textfield.
+		else if (u->elems[i].any.type == Z_TEXTFIELD)
 		{
 			z_color_t tfcol = Z_TEXTFIELDCOLOR;
 			z_color_t tftcol = Z_TEXTFIELDTEXTCOLOR;
@@ -198,20 +212,35 @@ z_renderui(z_ui_t const *u)
 				);
 			}
 		}
+		else // holdbutton.
+		{
+			z_color_t bcol = Z_BUTTONCOLOR;
+			z_color_t tcol = Z_BUTTONTEXTCOLOR;
+			if (mx >= x && my >= y && mx < x + w && my < y + h)
+			{
+				if (z_mdown(SDL_BUTTON_LEFT))
+				{
+					bcol = Z_BUTTONPRESSCOLOR;
+					tcol = Z_BUTTONTEXTPRESSCOLOR;
+				}
+				else
+				{
+					bcol = Z_BUTTONHOVERCOLOR;
+					tcol = Z_BUTTONTEXTHOVERCOLOR;
+				}
+			}
+			
+			z_conf.renderrect(x, y, w, h, bcol);
+			z_conf.rendertext(
+				x + pad,
+				y + pad,
+				w - 2 * pad,
+				h - 2 * pad,
+				u->elems[i].holdbutton.text,
+				tcol
+			);
+		}
 	}
-}
-
-void
-z_uiactive(z_ui_t *u, bool active)
-{
-	u->active = active;
-}
-
-void
-z_uipad(z_ui_t *u, i32 dx, i32 dy)
-{
-	u->x += dx;
-	u->y += dy;
 }
 
 void
@@ -238,7 +267,14 @@ z_uilabel(z_ui_t *u, char const *text)
 			.text = text
 		}
 	};
-	u->y += h;
+	if (u->horizontal)
+	{
+		u->x += w;
+	}
+	else
+	{
+		u->y += h;
+	}
 }
 
 bool
@@ -284,7 +320,14 @@ z_uibutton(z_ui_t *u, char const *text)
 			.text = text
 		}
 	};
-	u->y += h;
+	if (u->horizontal)
+	{
+		u->x += w;
+	}
+	else
+	{
+		u->y += h;
+	}
 	
 	return state;
 }
@@ -337,7 +380,14 @@ z_uislider(z_ui_t *u, char const *text, INOUT f32 *val)
 			.val = *val
 		}
 	};
-	u->y += h;
+	if (u->horizontal)
+	{
+		u->x += w;
+	}
+	else
+	{
+		u->y += h;
+	}
 	
 	return state;
 }
@@ -464,5 +514,67 @@ z_uitextfield(z_ui_t *u, char const *text, INOUT z_tfdata_t *tfdata, u32 ndraw)
 			.ndraw = ndraw
 		}
 	};
-	u->y += h;
+	if (u->horizontal)
+	{
+		u->x += w;
+	}
+	else
+	{
+		u->y += h;
+	}
+}
+
+bool
+z_holdbutton(z_ui_t *u, char const *text)
+{
+	if (u->nelems >= u->elemcap)
+	{
+		return false;
+	}
+	
+	bool state = false;
+	
+	i32 w, h;
+	TTF_SizeText(u->font, text, &w, &h);
+	w += 2 * z_conf.uipad;
+	h += 2 * z_conf.uipad;
+	
+	if (u->active)
+	{
+		i32 mx, my;
+		z_mpos(u->wnd, &mx, &my);
+		
+		if (z_mdown(SDL_BUTTON_LEFT)
+			&& mx >= u->x
+			&& my >= u->y
+			&& mx < u->x + w
+			&& my < u->y + h)
+		{
+			state = true;
+		}
+	}
+	
+	u->elems[u->nelems++] = (z_uielem_t)
+	{
+		.holdbutton =
+		{
+			.type = Z_HOLDBUTTON,
+			.flags = Z_INACTIVE * !u->active,
+			.x = u->x,
+			.y = u->y,
+			.w = w,
+			.h = h,
+			.text = text
+		}
+	};
+	if (u->horizontal)
+	{
+		u->x += w;
+	}
+	else
+	{
+		u->y += h;
+	}
+	
+	return state;
 }
