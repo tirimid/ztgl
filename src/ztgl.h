@@ -19,7 +19,7 @@
 
 #define Z_VERMAJOR 1
 #define Z_VERMINOR 4
-#define Z_VERPATCH 1
+#define Z_VERPATCH 2
 
 //--------//
 // macros //
@@ -91,6 +91,7 @@ typedef int8_t i8;
 typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
+typedef ssize_t isize;
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -335,6 +336,7 @@ f32 z_shortestangle(f32 a, f32 b);
 f32 z_r2d(f32 r);
 f32 z_d2r(f32 d);
 void *z_allocbatch(INOUT z_allocbatch_t *allocs, usize nallocs);
-void *z_reallocbatch(INOUT z_reallocbatch_t *reallocs, usize nreallocs);
+void *z_reallocbatch(void *p, INOUT z_reallocbatch_t *reallocs, usize nreallocs);
+u64 z_align(u64 addr, u64 align);
 
 #endif
