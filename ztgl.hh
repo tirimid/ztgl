@@ -223,14 +223,14 @@ union UIElem
 
 struct AllocBatchDesc
 {
-	void*& m_Pointer;
+	void** m_Pointer;
 	usize  m_Count;
 	usize  m_Size;
 };
 
 struct ReallocBatchDesc
 {
-	void*& m_Pointer;
+	void** m_Pointer;
 	usize  m_OldCount;
 	usize  m_NewCount;
 	usize  m_Size;
@@ -1353,7 +1353,7 @@ AllocBatch(IN_OUT AllocBatchDesc allocs[], usize nAllocs)
 	usize offset = 0;
 	for (usize i = 0; i < nAllocs; ++i)
 	{
-		allocs[i].m_Pointer = &p[offset];
+		*allocs[i].m_Pointer = &p[offset];
 		offset += allocs[i].m_Count * allocs[i].m_Size;
 		offset = Align(offset, ZTGL_BATCH_ALIGN);
 	}
@@ -1396,7 +1396,7 @@ ReallocBatch(void* p, IN_OUT ReallocBatchDesc reallocs[], usize nReallocs)
 		usize bytes = newBytes < oldBytes ? newBytes : oldBytes;
 		
 		memmove(&up[newOffsets[i]], &up[oldOffsets[i]], bytes);
-		reallocs[i].m_Pointer = &up[newOffsets[i]];
+		*reallocs[i].m_Pointer = &up[newOffsets[i]];
 	}
 	
 	free(oldOffsets);
