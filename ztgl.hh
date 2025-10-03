@@ -43,7 +43,6 @@ extern "C"
 #endif
 
 // library data constants.
-#define ZTGL_MAX_RES_NAME 15
 #define ZTGL_BATCH_ALIGN 16
 #define ZTGL_MAX_OPTION_KEY 128
 #define ZTGL_MAX_OPTION_VALUE 128
@@ -341,6 +340,8 @@ u64   Align(u64 addr, u64 align);
 #define ZTGL_IMPL_INCLUDED
 
 // standard library.
+#include <cctype>
+#include <cerrno>
 #include <cstdarg>
 #include <cstdlib>
 #include <cstring>
@@ -552,36 +553,131 @@ TextInput(char c)
 ErrorCode
 OptionRaw(OUT char data[], FILE* file, char const* key)
 {
-	(void)data, (void)file, (void)key;
-	__builtin_unreachable();
+	fseek(file, 0, SEEK_SET);
+	
+	for (usize line = 0; !feof(file) && !ferror(file); ++line)
+	{
+		i32 c;
+		while (c = fgetc(file), c != EOF && isspace(c))
+		{
+		}
+		
+		if (c == '#')
+		{
+			while (c = fgetc(file), c != EOF && c != '\n')
+			{
+			}
+		}
+		
+		if (c == '\n' || feof(file))
+		{
+			continue;
+		}
+		
+		fseek(file, -1, SEEK_CUR);
+		char keyBuffer[ZTGL_MAX_OPTION_KEY] = {0};
+		if (fscanf(file, ZTGL_OPTION_SCAN, keyBuffer, data) != 2)
+		{
+			return INVALID_FORMAT;
+		}
+		
+		if (!strcmp(data, "NONE"))
+		{
+			data[0] = 0;
+		}
+		
+		if (!strcmp(keyBuffer, key))
+		{
+			return OK;
+		}
+	}
+	
+	return NOT_FOUND;
 }
 
 ErrorCode
 OptionKeycode(OUT SDL_Keycode& data, FILE* file, char const* key)
 {
-	(void)data, (void)file, (void)key;
-	__builtin_unreachable();
+	char buffer[ZTGL_MAX_OPTION_VALUE] = {0};
+	ErrorCode err = OptionRaw(buffer, file, key);
+	if (err)
+	{
+		return err;
+	}
+	
+	data = SDL_GetKeyFromName(buffer);
+	if (data == SDLK_UNKNOWN)
+	{
+		return INVALID_CONVERSION;
+	}
+	
+	return OK;
 }
 
 ErrorCode
 OptionFloat(OUT f32& data, FILE* file, char const* key)
 {
-	(void)data, (void)file, (void)key;
-	__builtin_unreachable();
+	char buffer[ZTGL_MAX_OPTION_VALUE] = {0};
+	ErrorCode err = OptionRaw(buffer, file, key);
+	if (err)
+	{
+		return err;
+	}
+	
+	errno = 0;
+	data = strtof(buffer, nullptr);
+	if (errno)
+	{
+		return INVALID_CONVERSION;
+	}
+	
+	return OK;
 }
 
 ErrorCode
 OptionInt(OUT i64& data, FILE* file, char const* key)
 {
-	(void)data, (void)file, (void)key;
-	__builtin_unreachable();
+	char buffer[ZTGL_MAX_OPTION_VALUE] = {0};
+	ErrorCode err = OptionRaw(buffer, file, key);
+	if (err)
+	{
+		return err;
+	}
+	
+	errno = 0;
+	data = (i64)strtoll(buffer, nullptr, 0);
+	if (errno)
+	{
+		return INVALID_CONVERSION;
+	}
+	
+	return OK;
 }
 
 ErrorCode
 OptionBool(OUT bool& data, FILE* file, char const* key)
 {
-	(void)data, (void)file, (void)key;
-	__builtin_unreachable();
+	char buffer[ZTGL_MAX_OPTION_VALUE] = {0};
+	ErrorCode err = OptionRaw(buffer, file, key);
+	if (err)
+	{
+		return err;
+	}
+	
+	if (!strcmp(buffer, "true"))
+	{
+		data = true;
+		return OK;
+	}
+	else if (!strcmp(buffer, "false"))
+	{
+		data = false;
+		return OK;
+	}
+	else
+	{
+		return INVALID_CONVERSION;
+	}
 }
 
 //----//
@@ -610,11 +706,82 @@ UIPanel::Render()
 void
 UIPanel::Label(char const* text)
 {
+	if (m_ElemsLength >= m_ElemsCapacity)
+	{
+		return;
+	}
+	
+	i32 w;
+	i32 h;
+	TTF_SizeText(m_Font, text, &w, &h);
+	
+	m_Elems[m_ElemsLength].m_Label.m_Type = Internal::LABEL;
+	m_Elems[m_ElemsLength].m_Label.m_Flags = Internal::INACTIVE * !m_Active;
+	m_Elems[m_ElemsLength].m_Label.m_X = m_X;
+	m_Elems[m_ElemsLength].m_Label.m_Y = m_X;
+	m_Elems[m_ElemsLength].m_Label.m_W = w;
+	m_Elems[m_ElemsLength].m_Label.m_H = h;
+	m_Elems[m_ElemsLength].m_Label.m_Text = text;
+	++m_ElemsLength;
+	
+	if (m_Horizontal)
+	{
+		m_X += w;
+	}
+	else
+	{
+		m_Y += h;
+	}
 }
 
 bool
 UIPanel::Button(char const* text)
 {
+	if (m_ElemsLength >= m_ElemsCapacity)
+	{
+		return false;
+	}
+	
+	bool state = false;
+	
+	i32 w;
+	i32 h;
+	TTF_SizeText(m_Font, text, &w, &h);
+	w += 2 * Conf.m_UIPad;
+	h += 2 * Conf.m_UIPad;
+	
+	if (m_Active)
+	{
+		SDL_Point m = MousePos(m_Window);
+		if (MouseReleased(SDL_BUTTON_LEFT)
+			&& m.x >= m_X
+			&& m.y >= m_Y
+			&& m.x < m_X + w
+			&& m.y < m_Y + h)
+		{
+			state = true;
+		}
+	}
+	
+	m_Elems[m_ElemsLength].m_Button.m_Type = Internal::BUTTON;
+	m_Elems[m_ElemsLength].m_Button.m_Flags = Internal::INACTIVE * !m_Active;
+	m_Elems[m_ElemsLength].m_Button.m_X = m_X;
+	m_Elems[m_ElemsLength].m_Button.m_Y = m_Y;
+	m_Elems[m_ElemsLength].m_Button.m_W = w;
+	m_Elems[m_ElemsLength].m_Button.m_H = h;
+	m_Elems[m_ElemsLength].m_Button.m_Text = text;
+	++m_ElemsLength;
+	
+	if (m_Horizontal)
+	{
+		m_X += w;
+	}
+	else
+	{
+		m_Y += h;
+	}
+	
+	return state;
 }
 
 bool
