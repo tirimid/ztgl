@@ -18,7 +18,7 @@ extern "C"
 
 #define ZTGL_VER_MAJOR 1
 #define ZTGL_VER_MINOR 0
-#define ZTGL_VER_PATCH 1
+#define ZTGL_VER_PATCH 2
 
 //--------//
 // macros //
@@ -216,8 +216,8 @@ union UIElem
 		i32 m_W;
 		i32 m_H;
 		u32 m_NDraw;
-		char const* m_Text;
-		TFData&     m_TFData;
+		char const*   m_Text;
+		TFData const* m_TFData;
 	} m_TextField;
 };
 
@@ -250,6 +250,7 @@ struct TFData
 	u32   m_First{};
 	bool  m_Selected{};
 	
+	TFData() = default;
 	TFData(char buffer[], usize capacity);
 };
 
@@ -885,7 +886,7 @@ UIPanel::Render()
 			
 			conf.m_RenderRect(x, y, w, h, textFieldColor);
 			
-			TFData const& data = m_Elems[i].m_TextField.m_TFData;
+			TFData const& data = *m_Elems[i].m_TextField.m_TFData;
 			i32 charWidth = (w - 2 * pad) / m_Elems[i].m_TextField.m_NDraw;
 			i32 charHeight = h - 2 * pad;
 			
@@ -1179,7 +1180,7 @@ UIPanel::TextField(char const* text, IN_OUT TFData& data, u32 nDraw)
 	m_Elems[m_ElemsLength].m_TextField.m_W = w;
 	m_Elems[m_ElemsLength].m_TextField.m_H = h;
 	m_Elems[m_ElemsLength].m_TextField.m_Text = text;
-	m_Elems[m_ElemsLength].m_TextField.m_TFData = data;
+	m_Elems[m_ElemsLength].m_TextField.m_TFData = &data;
 	m_Elems[m_ElemsLength].m_TextField.m_NDraw = nDraw;
 	++m_ElemsLength;
 	
