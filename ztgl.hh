@@ -33,13 +33,13 @@ extern "C"
 
 // profiling.
 #ifdef ZTGL_PROFILE
-#define ZTGL_NEW_TIMER(Timer) u64 Timer
-#define ZTGL_BEGIN_TIMER(Timer) z::BeginTimer(Timer)
-#define ZTGL_END_TIMER(Timer) z::EndTimer(Timer, Name)
+#define ZTGL_NEW_TIMER(timer) u64 timer
+#define ZTGL_BEGIN_TIMER(timer) ZTGL::BeginTimer(timer)
+#define ZTGL_END_TIMER(timer) ZTGL::EndTimer(timer, name)
 #else
-#define ZTGL_NEW_TIMER(Timer)
-#define ZTGL_BEGIN_TIMER(Timer)
-#define ZTGL_END_TIMER(Timer, Name)
+#define ZTGL_NEW_TIMER(timer)
+#define ZTGL_BEGIN_TIMER(timer)
+#define ZTGL_END_TIMER(timer, name)
 #endif
 
 // library data constants.
@@ -50,14 +50,14 @@ extern "C"
 #define ZTGL_OPTION_SCAN "%127s = %127[^\r\n]"
 
 // resource inclusion.
-#define ZTGL_INC_XXD(Name) \
-	extern u8  Name[]; \
-	extern u32 Name##_len;
+#define ZTGL_INC_XXD(name) \
+	extern u8  name[]; \
+	extern u32 name##_len;
 
-#define ZTGL_INC_RES(Name) \
+#define ZTGL_INC_RES(name) \
 	{ \
-		.m_Data = Name, \
-		.m_Size = Name##_len \
+		.m_Data = name, \
+		.m_Size = name##_len \
 	}
 
 //--------------//
