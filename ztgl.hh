@@ -25,10 +25,13 @@ extern "C"
 //--------//
 
 #ifndef ZTGL_NO_GLOBAL
+
 #define OUT
 #define IN_OUT
+
 #define PI 3.141592f
 #define TAU (2.0f * PI)
+
 #endif
 
 // profiling.
@@ -155,15 +158,7 @@ struct Res
 	u32& m_Size;
 };
 
-struct TFData
-{
-	char* m_Buffer;
-	u32   m_Length;
-	u32   m_Capacity;
-	u32   m_Cursor;
-	u32   m_First;
-	bool  m_Selected;
-};
+struct TFData;
 
 union UIElem
 {
@@ -221,20 +216,9 @@ union UIElem
 		i32 m_W;
 		i32 m_H;
 		u32 m_NDraw;
-		char const*   m_Text;
-		TFData const& m_TFData;
-	} m_TextField;
-	
-	struct
-	{
-		u8  m_Type;
-		u16 m_Flags;
-		i32 m_X;
-		i32 m_Y;
-		i32 m_W;
-		i32 m_H;
 		char const* m_Text;
-	} m_HoldButton;
+		TFData&     m_TFData;
+	} m_TextField;
 };
 
 struct AllocBatchDesc
@@ -257,19 +241,31 @@ struct ReallocBatchDesc
 //------------------------------//
 
 // ui.
+struct TFData
+{
+	char* m_Buffer{};
+	u32   m_Length{};
+	u32   m_Capacity{};
+	u32   m_Cursor{};
+	u32   m_First{};
+	bool  m_Selected{};
+	
+	TFData(char buffer[], usize capacity);
+};
+
 struct UIPanel
 {
-	UIElem*   m_Elems;
-	usize     m_ElemsLength;
-	usize     m_ElemsCapacity;
-	TTF_Font* m_Font;
-	SDL_Window const* m_Window;
+	UIElem*   m_Elems{};
+	usize     m_ElemsLength{};
+	usize     m_ElemsCapacity{};
+	TTF_Font* m_Font{};
+	SDL_Window const* m_Window{};
 	
 	// can safely be modified by end user.
-	i32  m_X;
-	i32  m_Y;
-	bool m_Active;
-	bool m_Horizontal;
+	i32  m_X{};
+	i32  m_Y{};
+	bool m_Active{true};
+	bool m_Horizontal{};
 	
 	UIPanel(UIElem elems[], usize elemsCapacity, TTF_Font* font, SDL_Window const* window);
 	
@@ -277,7 +273,7 @@ struct UIPanel
 	void Label(char const* text);
 	bool Button(char const* text);
 	bool Slider(char const* text, IN_OUT f32& value);
-	void TextField(char const* text, IN_OUT TFData& data, u32 nDraw);
+	bool TextField(char const* text, IN_OUT TFData& data, u32 nDraw);
 	bool HoldButton(char const* text);
 };
 
@@ -285,13 +281,13 @@ struct UIPanel
 // library configuration //
 //-----------------------//
 
-extern Conf Conf;
+extern Conf g_Conf;
 
 //-------------//
 // data tables //
 //-------------//
 
-extern u8 DefaultColors[][4];
+extern u8 g_DefaultColors[][4];
 
 //-----------------------//
 // standalone procedures //
@@ -370,16 +366,16 @@ enum UIType
 };
 
 // input.
-u8 KeyDownStates[1024 / 8];
-u8 KeyPressStates[1024 / 8];
-u8 KeyReleaseStates[1024 / 8];
-u8 MouseDownStates;
-u8 MousePressStates;
-u8 MouseReleaseStates;
-u8 TextInputStates[128 / 8];
+u8 g_KeyDownStates[1024 / 8];
+u8 g_KeyPressStates[1024 / 8];
+u8 g_KeyReleaseStates[1024 / 8];
+u8 g_MouseDownStates;
+u8 g_MousePressStates;
+u8 g_MouseReleaseStates;
+u8 g_TextInputStates[128 / 8];
 
 // util.
-u64 TickStart;
+u64 g_TickStart;
 
 }
 
@@ -414,13 +410,13 @@ HandleInput(SDL_Event const& event)
 		
 		if (state)
 		{
-			Internal::KeyDownStates[byte] |= 1 << bit;
-			Internal::KeyPressStates[byte] |= 1 << bit;
+			Internal::g_KeyDownStates[byte] |= 1 << bit;
+			Internal::g_KeyPressStates[byte] |= 1 << bit;
 		}
 		else
 		{
-			Internal::KeyDownStates[byte] &= ~(1 << bit);
-			Internal::KeyReleaseStates[byte] |= 1 << bit;
+			Internal::g_KeyDownStates[byte] &= ~(1 << bit);
+			Internal::g_KeyReleaseStates[byte] |= 1 << bit;
 		}
 	}
 	else if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP)
@@ -429,13 +425,13 @@ HandleInput(SDL_Event const& event)
 		
 		if (state)
 		{
-			Internal::MouseDownStates |= 1 << event.button.button;
-			Internal::MousePressStates |= 1 << event.button.button;
+			Internal::g_MouseDownStates |= 1 << event.button.button;
+			Internal::g_MousePressStates |= 1 << event.button.button;
 		}
 		else
 		{
-			Internal::MouseDownStates &= ~(1 << event.button.button);
-			Internal::MouseReleaseStates |= 1 << event.button.button;
+			Internal::g_MouseDownStates &= ~(1 << event.button.button);
+			Internal::g_MouseReleaseStates |= 1 << event.button.button;
 		}
 	}
 	else if (event.type == SDL_TEXTINPUT)
@@ -450,20 +446,20 @@ HandleInput(SDL_Event const& event)
 		
 		usize byte = c / 8;
 		usize bit = c % 8;
-		Internal::TextInputStates[byte] |= 1 << bit;
+		Internal::g_TextInputStates[byte] |= 1 << bit;
 	}
 }
 
 void
 PrepareInput()
 {
-	memset(Internal::KeyPressStates, 0, sizeof(Internal::KeyPressStates));
-	memset(Internal::KeyReleaseStates, 0, sizeof(Internal::KeyReleaseStates));
+	memset(Internal::g_KeyPressStates, 0, sizeof(Internal::g_KeyPressStates));
+	memset(Internal::g_KeyReleaseStates, 0, sizeof(Internal::g_KeyReleaseStates));
 	
-	Internal::MousePressStates = 0;
-	Internal::MouseReleaseStates = 0;
+	Internal::g_MousePressStates = 0;
+	Internal::g_MouseReleaseStates = 0;
 	
-	memset(Internal::TextInputStates, 0, sizeof(Internal::TextInputStates));
+	memset(Internal::g_TextInputStates, 0, sizeof(Internal::g_TextInputStates));
 }
 
 bool
@@ -476,7 +472,7 @@ KeyDown(SDL_Keycode key)
 	}
 	usize byte = key / 8;
 	usize bit = key % 8;
-	return Internal::KeyDownStates[byte] & 1 << bit;
+	return Internal::g_KeyDownStates[byte] & 1 << bit;
 }
 
 bool
@@ -489,7 +485,7 @@ KeyPressed(SDL_Keycode key)
 	}
 	usize byte = key / 8;
 	usize bit = key % 8;
-	return Internal::KeyPressStates[byte] & 1 << bit;
+	return Internal::g_KeyPressStates[byte] & 1 << bit;
 }
 
 bool
@@ -502,7 +498,7 @@ KeyReleased(SDL_Keycode key)
 	}
 	usize byte = key / 8;
 	usize bit = key % 8;
-	return Internal::KeyReleaseStates[byte] & 1 << bit;
+	return Internal::g_KeyReleaseStates[byte] & 1 << bit;
 }
 
 SDL_Point
@@ -513,8 +509,8 @@ MousePos(SDL_Window const* window)
 		return {0, 0};
 	}
 	
-	i32 x;
-	i32 y;
+	i32 x{};
+	i32 y{};
 	SDL_GetMouseState(&x, &y);
 	
 	return {x, y};
@@ -523,19 +519,19 @@ MousePos(SDL_Window const* window)
 bool
 MouseDown(i32 button)
 {
-	return !!(Internal::MouseDownStates & 1 << button);
+	return !!(Internal::g_MouseDownStates & 1 << button);
 }
 
 bool
 MousePressed(i32 button)
 {
-	return !!(Internal::MousePressStates & 1 << button);
+	return !!(Internal::g_MousePressStates & 1 << button);
 }
 
 bool
 MouseReleased(i32 button)
 {
-	return !!(Internal::MouseReleaseStates & 1 << button);
+	return !!(Internal::g_MouseReleaseStates & 1 << button);
 }
 
 bool
@@ -543,7 +539,7 @@ TextInput(char c)
 {
 	usize byte = c / 8;
 	usize bit = c % 8;
-	return Internal::TextInputStates[byte] & 1 << bit;
+	return Internal::g_TextInputStates[byte] & 1 << bit;
 }
 
 //---------//
@@ -557,7 +553,7 @@ OptionRaw(OUT char data[], FILE* file, char const* key)
 	
 	for (usize line = 0; !feof(file) && !ferror(file); ++line)
 	{
-		i32 c;
+		i32 c{};
 		while (c = fgetc(file), c != EOF && isspace(c))
 		{
 		}
@@ -684,23 +680,215 @@ OptionBool(OUT bool& data, FILE* file, char const* key)
 // ui //
 //----//
 
+TFData::TFData(char buffer[], usize capacity)
+	: m_Buffer(buffer), m_Capacity(capacity)
+{
+	memset(buffer, 0, capacity);
+}
+
 UIPanel::UIPanel(
-	UIElem elems[],
-	usize elemsCapacity,
+	UIElem    elems[],
+	usize     elemsCapacity,
 	TTF_Font* font,
 	SDL_Window const* window
 )
 	: m_Elems(elems),
 	m_ElemsCapacity(elemsCapacity),
 	m_Font(font),
-	m_Window(window),
-	m_Active(true)
+	m_Window(window)
 {
 }
 
 void
 UIPanel::Render()
 {
+	if (!m_ElemsLength)
+	{
+		return;
+	}
+	
+	// find render boundaries to draw panel.
+	i32 minX = INT32_MAX;
+	i32 minY = INT32_MAX;
+	i32 maxX = INT32_MIN;
+	i32 maxY = INT32_MIN;
+	for (usize i = 0; i < m_ElemsLength; ++i)
+	{
+		i32 x = m_Elems[i].m_Any.m_X;
+		i32 y = m_Elems[i].m_Any.m_Y;
+		i32 w = m_Elems[i].m_Any.m_W;
+		i32 h = m_Elems[i].m_Any.m_H;
+		
+		minX = x < minX ? x : minX;
+		minY = y < minY ? y : minY;
+		maxX = x + w > maxX ? x + w : maxX;
+		maxY = y + h > maxY ? y + h : maxY;
+	}
+	
+	i32 pad = g_Conf.m_UIPad;
+	
+	// draw panel.
+	g_Conf.m_RenderRect(
+		minX - pad,
+		minY - pad,
+		maxX - minX + 2 * pad,
+		maxY - minY + 2 * pad,
+		PANEL_COLOR
+	);
+	
+	// draw UI elements.
+	SDL_Point m = MousePos(m_Window);
+	for (usize i = 0; i < m_ElemsLength; ++i)
+	{
+		Internal::UIType type = (Internal::UIType)m_Elems[i].m_Any.m_Type;
+		i32 x = m_Elems[i].m_Any.m_X;
+		i32 y = m_Elems[i].m_Any.m_Y;
+		i32 w = m_Elems[i].m_Any.m_W;
+		i32 h = m_Elems[i].m_Any.m_H;
+		
+		if (m_Elems[i].m_Any.m_Flags & Internal::INACTIVE)
+		{
+			g_Conf.m_RenderRect(x, y, w, h, INACTIVE_COLOR);
+			continue;
+		}
+		
+		if (type == Internal::LABEL)
+		{
+			g_Conf.m_RenderText(
+				x,
+				y,
+				w,
+				h,
+				m_Elems[i].m_Label.m_Text,
+				LABEL_TEXT_COLOR
+			);
+		}
+		else if (type == Internal::BUTTON || type == Internal::BUTTON)
+		{
+			Color buttonColor = BUTTON_COLOR;
+			Color textColor = BUTTON_TEXT_COLOR;
+			if (m.x >= x && m.y >= y && m.x < x + w && m.y < y + h)
+			{
+				if (MouseDown(SDL_BUTTON_LEFT))
+				{
+					buttonColor = BUTTON_PRESS_COLOR;
+					textColor = BUTTON_TEXT_PRESS_COLOR;
+				}
+				else
+				{
+					buttonColor = BUTTON_HOVER_COLOR;
+					textColor = BUTTON_TEXT_HOVER_COLOR;
+				}
+			}
+			
+			g_Conf.m_RenderRect(x, y, w, h, buttonColor);
+			g_Conf.m_RenderText(
+				x + pad,
+				y + pad,
+				w - 2 * pad,
+				h - 2 * pad,
+				m_Elems[i].m_Button.m_Text,
+				textColor
+			);
+		}
+		else if (type == Internal::SLIDER)
+		{
+			Color sliderColor = SLIDER_COLOR;
+			Color textColor = SLIDER_TEXT_COLOR;
+			Color barColor = SLIDER_BAR_COLOR;
+			if (m.x >= x && m.y >= y && m.x < x + w && m.y < y + h)
+			{
+				if (MouseDown(SDL_BUTTON_LEFT))
+				{
+					sliderColor = SLIDER_PRESS_COLOR;
+					textColor = SLIDER_TEXT_PRESS_COLOR;
+					barColor = SLIDER_BAR_PRESS_COLOR;
+				}
+				else
+				{
+					sliderColor = SLIDER_HOVER_COLOR;
+					textColor = SLIDER_TEXT_HOVER_COLOR;
+					barColor = SLIDER_BAR_HOVER_COLOR;
+				}
+			}
+			
+			g_Conf.m_RenderRect(x, y, w, h, sliderColor);
+			g_Conf.m_RenderRect(x, y, m_Elems[i].m_Slider.m_Value * w, h, barColor);
+			g_Conf.m_RenderText(
+				x + pad,
+				y + pad,
+				w - 2 * pad,
+				h - 2 * pad,
+				m_Elems[i].m_Slider.m_Text,
+				textColor
+			);
+		}
+		else // text field.
+		{
+			Color textFieldColor = TEXT_FIELD_COLOR;
+			Color textFieldTextColor = TEXT_FIELD_TEXT_COLOR;
+			Color textFieldBarColor = TEXT_FIELD_TEXT_COLOR;
+			Color textFieldPromptColor = TEXT_FIELD_PROMPT_COLOR;
+			if (m.x >= x && m.y >= y && m.x < x + w && m.y < y + h)
+			{
+				if (MouseDown(SDL_BUTTON_LEFT))
+				{
+					textFieldColor = TEXT_FIELD_PRESS_COLOR;
+					textFieldTextColor = TEXT_FIELD_TEXT_COLOR;
+					textFieldBarColor = TEXT_FIELD_BAR_COLOR;
+					textFieldPromptColor = TEXT_FIELD_PROMPT_COLOR;
+				}
+				else
+				{
+					textFieldColor = TEXT_FIELD_HOVER_COLOR;
+					textFieldTextColor = TEXT_FIELD_TEXT_HOVER_COLOR;
+					textFieldBarColor = TEXT_FIELD_BAR_HOVER_COLOR;
+					textFieldPromptColor = TEXT_FIELD_PROMPT_HOVER_COLOR;
+				}
+			}
+			
+			g_Conf.m_RenderRect(x, y, w, h, textFieldColor);
+			
+			TFData const& data = m_Elems[i].m_TextField.m_TFData;
+			i32 charWidth = (w - 2 * pad) / m_Elems[i].m_TextField.m_NDraw;
+			i32 charHeight = h - 2 * pad;
+			
+			char const* text = data.m_Length ? data.m_Buffer : m_Elems[i].m_TextField.m_Text;
+			u32   textFirst = data.m_Length ? data.m_First : 0;
+			u32   textLength = data.m_Length ? data.m_Length : strlen(text);
+			Color textColor = data.m_Length ? textFieldTextColor : textFieldPromptColor;
+			
+			i32 dx = 0;
+			for (u32 j = textFirst; j < textLength; ++j)
+			{
+				if (dx >= w - 2 * pad)
+				{
+					break;
+				}
+				char render[] = {text[j], 0};
+				g_Conf.m_RenderText(
+					x + pad + dx,
+					y + pad,
+					charWidth,
+					charHeight,
+					render,
+					textColor
+				);
+				dx += charWidth;
+			}
+			
+			if (data.m_Selected)
+			{
+				g_Conf.m_RenderRect(
+					x + pad + (data.m_Cursor - data.m_First) * charWidth,
+					y + pad,
+					g_Conf.m_UITextFieldBar,
+					charHeight,
+					textFieldBarColor
+				);
+			}
+		}
+	}
 }
 
 void
@@ -711,8 +899,8 @@ UIPanel::Label(char const* text)
 		return;
 	}
 	
-	i32 w;
-	i32 h;
+	i32 w{};
+	i32 h{};
 	TTF_SizeText(m_Font, text, &w, &h);
 	
 	m_Elems[m_ElemsLength].m_Label.m_Type = Internal::LABEL;
@@ -744,11 +932,11 @@ UIPanel::Button(char const* text)
 	
 	bool state = false;
 	
-	i32 w;
-	i32 h;
+	i32 w{};
+	i32 h{};
 	TTF_SizeText(m_Font, text, &w, &h);
-	w += 2 * Conf.m_UIPad;
-	h += 2 * Conf.m_UIPad;
+	w += 2 * g_Conf.m_UIPad;
+	h += 2 * g_Conf.m_UIPad;
 	
 	if (m_Active)
 	{
@@ -787,16 +975,238 @@ UIPanel::Button(char const* text)
 bool
 UIPanel::Slider(char const* text, IN_OUT f32& value)
 {
+	if (m_ElemsLength >= m_ElemsCapacity)
+	{
+		return false;
+	}
+	
+	bool state = false;
+	
+	i32 w{};
+	i32 h{};
+	TTF_SizeText(m_Font, text, &w, &h);
+	w += 2 * g_Conf.m_UIPad;
+	h += 2 * g_Conf.m_UIPad;
+	
+	if (m_Active)
+	{
+		SDL_Point m = MousePos(m_Window);
+		
+		if (MouseReleased(SDL_BUTTON_LEFT)
+			&& m.x >= m_X
+			&& m.y >= m_Y
+			&& m.x < m_X + w
+			&& m.y < m_Y + h)
+		{
+			value = (f32)(m.x - m_X) / w;
+			state = true;
+		}
+		
+		value = value < 0.0f ? 0.0f : value;
+		value = value > 1.0f ? 1.0f : value;
+	}
+	
+	m_Elems[m_ElemsLength].m_Slider.m_Type = Internal::SLIDER;
+	m_Elems[m_ElemsLength].m_Slider.m_Flags = Internal::INACTIVE * !m_Active;
+	m_Elems[m_ElemsLength].m_Slider.m_X = m_X;
+	m_Elems[m_ElemsLength].m_Slider.m_Y = m_Y;
+	m_Elems[m_ElemsLength].m_Slider.m_W = w;
+	m_Elems[m_ElemsLength].m_Slider.m_H = h;
+	m_Elems[m_ElemsLength].m_Slider.m_Text = text;
+	m_Elems[m_ElemsLength].m_Slider.m_Value = value;
+	++m_ElemsLength;
+	
+	if (m_Horizontal)
+	{
+		m_X += w;
+	}
+	else
+	{
+		m_Y += h;
+	}
+	
+	return state;
 }
 
-void
+// text field assumes that m_Font is loaded with monospace font.
+bool
 UIPanel::TextField(char const* text, IN_OUT TFData& data, u32 nDraw)
 {
+	if (m_ElemsLength >= m_ElemsCapacity)
+	{
+		return false;
+	}
+	
+	bool state = false;
+	
+	i32 charWidth{};
+	i32 charHeight{};
+	TTF_SizeText(m_Font, " ", &charWidth, &charHeight);
+	
+	i32 w = nDraw * charWidth + 2 * g_Conf.m_UIPad;
+	i32 h = charHeight + 2 * g_Conf.m_UIPad;
+	
+	if (m_Active)
+	{
+		if (MouseReleased(SDL_BUTTON_LEFT))
+		{
+			SDL_Point m = MousePos(m_Window);
+			if (m.x >= m_X && m.y >= m_Y && m.x < m_X + w && m.y < m_Y + h)
+			{
+				data.m_Selected = true;
+			}
+			else
+			{
+				data.m_Selected = false;
+			}
+		}
+		
+		if (data.m_Selected)
+		{
+			if (KeyPressed(SDLK_LEFT))
+			{
+				data.m_Cursor -= data.m_Cursor > 0;
+				data.m_First -= data.m_Cursor < data.m_First;
+			}
+			
+			if (KeyPressed(SDLK_RIGHT))
+			{
+				data.m_Cursor += data.m_Cursor < data.m_Length;
+				data.m_First += data.m_Cursor - data.m_First >= nDraw;
+			}
+			
+			if (KeyPressed(SDLK_UP))
+			{
+				data.m_Cursor = 0;
+				data.m_First = 0;
+			}
+			
+			if (KeyPressed(SDLK_DOWN))
+			{
+				data.m_Cursor = data.m_Length;
+				data.m_First = 0;
+				while (data.m_Cursor - data.m_First > nDraw)
+				{
+					++data.m_First;
+				}
+			}
+			
+			for (u8 i = 0; data.m_Length + 1 < data.m_Capacity && i < 128; ++i)
+			{
+				if (!isprint(i))
+				{
+					continue;
+				}
+				
+				if (TextInput(i))
+				{
+					state = true;
+					
+					memmove(
+						&data.m_Buffer[data.m_Cursor + 1],
+						&data.m_Buffer[data.m_Cursor],
+						data.m_Length - data.m_Cursor
+					);
+					
+					++data.m_Cursor;
+					data.m_First += data.m_Cursor - data.m_First >= nDraw;
+					
+					data.m_Buffer[data.m_Cursor - 1] = i;
+					++data.m_Length;
+					data.m_Buffer[data.m_Length] = 0;
+				}
+			}
+			
+			if (KeyPressed(SDLK_BACKSPACE) && data.m_Cursor)
+			{
+				state = true;
+				
+				memmove(
+					&data.m_Buffer[data.m_Cursor - 1],
+					&data.m_Buffer[data.m_Cursor],
+					data.m_Length - data.m_Cursor
+				);
+				
+				--data.m_Cursor;
+				data.m_First -= data.m_Cursor < data.m_First;
+				
+				--data.m_Length;
+				data.m_Buffer[data.m_Length] = 0;
+			}
+		}
+	}
+	
+	m_Elems[m_ElemsLength].m_TextField.m_Type = Internal::TEXT_FIELD;
+	m_Elems[m_ElemsLength].m_TextField.m_Flags = Internal::INACTIVE * !m_Active;
+	m_Elems[m_ElemsLength].m_TextField.m_X = m_X;
+	m_Elems[m_ElemsLength].m_TextField.m_X = m_Y;
+	m_Elems[m_ElemsLength].m_TextField.m_W = w;
+	m_Elems[m_ElemsLength].m_TextField.m_H = h;
+	m_Elems[m_ElemsLength].m_TextField.m_Text = text;
+	m_Elems[m_ElemsLength].m_TextField.m_TFData = data;
+	m_Elems[m_ElemsLength].m_TextField.m_NDraw = nDraw;
+	++m_ElemsLength;
+	
+	if (m_Horizontal)
+	{
+		m_X += w;
+	}
+	else
+	{
+		m_Y += h;
+	}
+	
+	return state;
 }
 
 bool
 UIPanel::HoldButton(char const* text)
 {
+	if (m_ElemsLength >= m_ElemsCapacity)
+	{
+		return false;
+	}
+	
+	bool state = false;
+	
+	i32 w{};
+	i32 h{};
+	TTF_SizeText(m_Font, text, &w, &h);
+	w += 2 * g_Conf.m_UIPad;
+	h += 2 * g_Conf.m_UIPad;
+	
+	if (m_Active)
+	{
+		SDL_Point m = MousePos(m_Window);
+		if (MouseReleased(SDL_BUTTON_LEFT)
+			&& m.x >= m_X
+			&& m.y >= m_Y
+			&& m.x < m_X + w
+			&& m.y < m_Y + h)
+		{
+			state = true;
+		}
+	}
+	
+	m_Elems[m_ElemsLength].m_Button.m_Type = Internal::HOLD_BUTTON;
+	m_Elems[m_ElemsLength].m_Button.m_Flags = Internal::INACTIVE * !m_Active;
+	m_Elems[m_ElemsLength].m_Button.m_X = m_X;
+	m_Elems[m_ElemsLength].m_Button.m_Y = m_Y;
+	m_Elems[m_ElemsLength].m_Button.m_W = w;
+	m_Elems[m_ElemsLength].m_Button.m_H = h;
+	m_Elems[m_ElemsLength].m_Button.m_Text = text;
+	++m_ElemsLength;
+	
+	if (m_Horizontal)
+	{
+		m_X += w;
+	}
+	else
+	{
+		m_Y += h;
+	}
+	
+	return state;
 }
 
 //------//
@@ -806,15 +1216,15 @@ UIPanel::HoldButton(char const* text)
 void
 Error(char const* format, ...)
 {
-	va_list args;
+	va_list args{};
 	va_start(args, format);
 	
 	char msg[512];
 	vsnprintf(msg, sizeof(msg), format, args);
 	
-	if (SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, Conf.m_ErrorTitle, msg, nullptr))
+	if (SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, g_Conf.m_ErrorTitle, msg, nullptr))
 	{
-		fprintf(Conf.m_Log, "\x1b[1;31merr\x1b[0m: %s\n", msg);
+		fprintf(g_Conf.m_Log, "\x1b[1;31merr\x1b[0m: %s\n", msg);
 	}
 	
 	va_end(args);
@@ -823,22 +1233,22 @@ Error(char const* format, ...)
 u64
 UnixMicro()
 {
-	timeval tv;
-	gettimeofday(&tv, nullptr);
-	return (u64)tv.tv_sec * 1000000 + (u64)tv.tv_usec;
+	timeval timeData{};
+	gettimeofday(&timeData, nullptr);
+	return (u64)timeData.tv_sec * 1000000 + (u64)timeData.tv_usec;
 }
 
 void
 BeginTick()
 {
-	Internal::TickStart = UnixMicro();
+	Internal::g_TickStart = UnixMicro();
 }
 
 void
 EndTick()
 {
 	u64 tickEnd = UnixMicro();
-	i64 timeLeft = Conf.m_TickMicro - tickEnd + Internal::TickStart;
+	i64 timeLeft = g_Conf.m_TickMicro - tickEnd + Internal::g_TickStart;
 	timeLeft *= timeLeft > 0;
 	
 	SDL_Delay(timeLeft / 1000);
@@ -855,7 +1265,7 @@ EndTimer(u64 timer, char const* name)
 {
 	u64 d = UnixMicro() - timer;
 	fprintf(
-		Conf.m_Log,
+		g_Conf.m_Log,
 		"\x1b[1;33mprofile\x1b[0m: %s: %llu\n",
 		name,
 		(unsigned long long)d
@@ -921,7 +1331,8 @@ ReallocBatch(void* p, IN_OUT ReallocBatchDesc reallocs[], usize nReallocs)
 	usize* oldOffsets = (usize*)calloc(nReallocs, sizeof(usize));
 	usize* newOffsets = (usize*)calloc(nReallocs, sizeof(usize));
 	
-	usize newSize = 0, oldSize = 0;
+	usize newSize = 0;
+	usize oldSize = 0;
 	for (usize i = 0; i < nReallocs; ++i)
 	{
 		newOffsets[i] = newSize;
