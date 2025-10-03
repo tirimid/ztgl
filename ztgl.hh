@@ -18,7 +18,7 @@ extern "C"
 
 #define ZTGL_VER_MAJOR 1
 #define ZTGL_VER_MINOR 0
-#define ZTGL_VER_PATCH 0
+#define ZTGL_VER_PATCH 1
 
 //--------//
 // macros //
@@ -281,13 +281,13 @@ struct UIPanel
 // library configuration //
 //-----------------------//
 
-extern Conf g_Conf;
+extern Conf conf;
 
 //-------------//
 // data tables //
 //-------------//
 
-extern u8 g_DefaultColors[][4];
+extern u8 defaultColors[][4];
 
 //-----------------------//
 // standalone procedures //
@@ -366,16 +366,16 @@ enum UIType
 };
 
 // input.
-u8 g_KeyDownStates[1024 / 8];
-u8 g_KeyPressStates[1024 / 8];
-u8 g_KeyReleaseStates[1024 / 8];
-u8 g_MouseDownStates;
-u8 g_MousePressStates;
-u8 g_MouseReleaseStates;
-u8 g_TextInputStates[128 / 8];
+u8 keyDownStates[1024 / 8];
+u8 keyPressStates[1024 / 8];
+u8 keyReleaseStates[1024 / 8];
+u8 mouseDownStates;
+u8 mousePressStates;
+u8 mouseReleaseStates;
+u8 textInputStates[128 / 8];
 
 // util.
-u64 g_TickStart;
+u64 tickStart;
 
 }
 
@@ -410,13 +410,13 @@ HandleInput(SDL_Event const& event)
 		
 		if (state)
 		{
-			Internal::g_KeyDownStates[byte] |= 1 << bit;
-			Internal::g_KeyPressStates[byte] |= 1 << bit;
+			Internal::keyDownStates[byte] |= 1 << bit;
+			Internal::keyPressStates[byte] |= 1 << bit;
 		}
 		else
 		{
-			Internal::g_KeyDownStates[byte] &= ~(1 << bit);
-			Internal::g_KeyReleaseStates[byte] |= 1 << bit;
+			Internal::keyDownStates[byte] &= ~(1 << bit);
+			Internal::keyReleaseStates[byte] |= 1 << bit;
 		}
 	}
 	else if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP)
@@ -425,13 +425,13 @@ HandleInput(SDL_Event const& event)
 		
 		if (state)
 		{
-			Internal::g_MouseDownStates |= 1 << event.button.button;
-			Internal::g_MousePressStates |= 1 << event.button.button;
+			Internal::mouseDownStates |= 1 << event.button.button;
+			Internal::mousePressStates |= 1 << event.button.button;
 		}
 		else
 		{
-			Internal::g_MouseDownStates &= ~(1 << event.button.button);
-			Internal::g_MouseReleaseStates |= 1 << event.button.button;
+			Internal::mouseDownStates &= ~(1 << event.button.button);
+			Internal::mouseReleaseStates |= 1 << event.button.button;
 		}
 	}
 	else if (event.type == SDL_TEXTINPUT)
@@ -446,20 +446,20 @@ HandleInput(SDL_Event const& event)
 		
 		usize byte = c / 8;
 		usize bit = c % 8;
-		Internal::g_TextInputStates[byte] |= 1 << bit;
+		Internal::textInputStates[byte] |= 1 << bit;
 	}
 }
 
 void
 PrepareInput()
 {
-	memset(Internal::g_KeyPressStates, 0, sizeof(Internal::g_KeyPressStates));
-	memset(Internal::g_KeyReleaseStates, 0, sizeof(Internal::g_KeyReleaseStates));
+	memset(Internal::keyPressStates, 0, sizeof(Internal::keyPressStates));
+	memset(Internal::keyReleaseStates, 0, sizeof(Internal::keyReleaseStates));
 	
-	Internal::g_MousePressStates = 0;
-	Internal::g_MouseReleaseStates = 0;
+	Internal::mousePressStates = 0;
+	Internal::mouseReleaseStates = 0;
 	
-	memset(Internal::g_TextInputStates, 0, sizeof(Internal::g_TextInputStates));
+	memset(Internal::textInputStates, 0, sizeof(Internal::textInputStates));
 }
 
 bool
@@ -472,7 +472,7 @@ KeyDown(SDL_Keycode key)
 	}
 	usize byte = key / 8;
 	usize bit = key % 8;
-	return Internal::g_KeyDownStates[byte] & 1 << bit;
+	return Internal::keyDownStates[byte] & 1 << bit;
 }
 
 bool
@@ -485,7 +485,7 @@ KeyPressed(SDL_Keycode key)
 	}
 	usize byte = key / 8;
 	usize bit = key % 8;
-	return Internal::g_KeyPressStates[byte] & 1 << bit;
+	return Internal::keyPressStates[byte] & 1 << bit;
 }
 
 bool
@@ -498,7 +498,7 @@ KeyReleased(SDL_Keycode key)
 	}
 	usize byte = key / 8;
 	usize bit = key % 8;
-	return Internal::g_KeyReleaseStates[byte] & 1 << bit;
+	return Internal::keyReleaseStates[byte] & 1 << bit;
 }
 
 SDL_Point
@@ -519,19 +519,19 @@ MousePos(SDL_Window const* window)
 bool
 MouseDown(i32 button)
 {
-	return !!(Internal::g_MouseDownStates & 1 << button);
+	return !!(Internal::mouseDownStates & 1 << button);
 }
 
 bool
 MousePressed(i32 button)
 {
-	return !!(Internal::g_MousePressStates & 1 << button);
+	return !!(Internal::mousePressStates & 1 << button);
 }
 
 bool
 MouseReleased(i32 button)
 {
-	return !!(Internal::g_MouseReleaseStates & 1 << button);
+	return !!(Internal::mouseReleaseStates & 1 << button);
 }
 
 bool
@@ -539,7 +539,7 @@ TextInput(char c)
 {
 	usize byte = c / 8;
 	usize bit = c % 8;
-	return Internal::g_TextInputStates[byte] & 1 << bit;
+	return Internal::textInputStates[byte] & 1 << bit;
 }
 
 //---------//
@@ -725,10 +725,10 @@ UIPanel::Render()
 		maxY = y + h > maxY ? y + h : maxY;
 	}
 	
-	i32 pad = g_Conf.m_UIPad;
+	i32 pad = conf.m_UIPad;
 	
 	// draw panel.
-	g_Conf.m_RenderRect(
+	conf.m_RenderRect(
 		minX - pad,
 		minY - pad,
 		maxX - minX + 2 * pad,
@@ -748,13 +748,13 @@ UIPanel::Render()
 		
 		if (m_Elems[i].m_Any.m_Flags & Internal::INACTIVE)
 		{
-			g_Conf.m_RenderRect(x, y, w, h, INACTIVE_COLOR);
+			conf.m_RenderRect(x, y, w, h, INACTIVE_COLOR);
 			continue;
 		}
 		
 		if (type == Internal::LABEL)
 		{
-			g_Conf.m_RenderText(
+			conf.m_RenderText(
 				x,
 				y,
 				w,
@@ -781,8 +781,8 @@ UIPanel::Render()
 				}
 			}
 			
-			g_Conf.m_RenderRect(x, y, w, h, buttonColor);
-			g_Conf.m_RenderText(
+			conf.m_RenderRect(x, y, w, h, buttonColor);
+			conf.m_RenderText(
 				x + pad,
 				y + pad,
 				w - 2 * pad,
@@ -812,9 +812,9 @@ UIPanel::Render()
 				}
 			}
 			
-			g_Conf.m_RenderRect(x, y, w, h, sliderColor);
-			g_Conf.m_RenderRect(x, y, m_Elems[i].m_Slider.m_Value * w, h, barColor);
-			g_Conf.m_RenderText(
+			conf.m_RenderRect(x, y, w, h, sliderColor);
+			conf.m_RenderRect(x, y, m_Elems[i].m_Slider.m_Value * w, h, barColor);
+			conf.m_RenderText(
 				x + pad,
 				y + pad,
 				w - 2 * pad,
@@ -847,7 +847,7 @@ UIPanel::Render()
 				}
 			}
 			
-			g_Conf.m_RenderRect(x, y, w, h, textFieldColor);
+			conf.m_RenderRect(x, y, w, h, textFieldColor);
 			
 			TFData const& data = m_Elems[i].m_TextField.m_TFData;
 			i32 charWidth = (w - 2 * pad) / m_Elems[i].m_TextField.m_NDraw;
@@ -866,7 +866,7 @@ UIPanel::Render()
 					break;
 				}
 				char render[] = {text[j], 0};
-				g_Conf.m_RenderText(
+				conf.m_RenderText(
 					x + pad + dx,
 					y + pad,
 					charWidth,
@@ -879,10 +879,10 @@ UIPanel::Render()
 			
 			if (data.m_Selected)
 			{
-				g_Conf.m_RenderRect(
+				conf.m_RenderRect(
 					x + pad + (data.m_Cursor - data.m_First) * charWidth,
 					y + pad,
-					g_Conf.m_UITextFieldBar,
+					conf.m_UITextFieldBar,
 					charHeight,
 					textFieldBarColor
 				);
@@ -935,8 +935,8 @@ UIPanel::Button(char const* text)
 	i32 w{};
 	i32 h{};
 	TTF_SizeText(m_Font, text, &w, &h);
-	w += 2 * g_Conf.m_UIPad;
-	h += 2 * g_Conf.m_UIPad;
+	w += 2 * conf.m_UIPad;
+	h += 2 * conf.m_UIPad;
 	
 	if (m_Active)
 	{
@@ -985,8 +985,8 @@ UIPanel::Slider(char const* text, IN_OUT f32& value)
 	i32 w{};
 	i32 h{};
 	TTF_SizeText(m_Font, text, &w, &h);
-	w += 2 * g_Conf.m_UIPad;
-	h += 2 * g_Conf.m_UIPad;
+	w += 2 * conf.m_UIPad;
+	h += 2 * conf.m_UIPad;
 	
 	if (m_Active)
 	{
@@ -1043,8 +1043,8 @@ UIPanel::TextField(char const* text, IN_OUT TFData& data, u32 nDraw)
 	i32 charHeight{};
 	TTF_SizeText(m_Font, " ", &charWidth, &charHeight);
 	
-	i32 w = nDraw * charWidth + 2 * g_Conf.m_UIPad;
-	i32 h = charHeight + 2 * g_Conf.m_UIPad;
+	i32 w = nDraw * charWidth + 2 * conf.m_UIPad;
+	i32 h = charHeight + 2 * conf.m_UIPad;
 	
 	if (m_Active)
 	{
@@ -1172,8 +1172,8 @@ UIPanel::HoldButton(char const* text)
 	i32 w{};
 	i32 h{};
 	TTF_SizeText(m_Font, text, &w, &h);
-	w += 2 * g_Conf.m_UIPad;
-	h += 2 * g_Conf.m_UIPad;
+	w += 2 * conf.m_UIPad;
+	h += 2 * conf.m_UIPad;
 	
 	if (m_Active)
 	{
@@ -1222,9 +1222,9 @@ Error(char const* format, ...)
 	char msg[512];
 	vsnprintf(msg, sizeof(msg), format, args);
 	
-	if (SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, g_Conf.m_ErrorTitle, msg, nullptr))
+	if (SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, conf.m_ErrorTitle, msg, nullptr))
 	{
-		fprintf(g_Conf.m_Log, "\x1b[1;31merr\x1b[0m: %s\n", msg);
+		fprintf(conf.m_Log, "\x1b[1;31merr\x1b[0m: %s\n", msg);
 	}
 	
 	va_end(args);
@@ -1241,14 +1241,14 @@ UnixMicro()
 void
 BeginTick()
 {
-	Internal::g_TickStart = UnixMicro();
+	Internal::tickStart = UnixMicro();
 }
 
 void
 EndTick()
 {
 	u64 tickEnd = UnixMicro();
-	i64 timeLeft = g_Conf.m_TickMicro - tickEnd + Internal::g_TickStart;
+	i64 timeLeft = conf.m_TickMicro - tickEnd + Internal::tickStart;
 	timeLeft *= timeLeft > 0;
 	
 	SDL_Delay(timeLeft / 1000);
@@ -1265,7 +1265,7 @@ EndTimer(u64 timer, char const* name)
 {
 	u64 d = UnixMicro() - timer;
 	fprintf(
-		g_Conf.m_Log,
+		conf.m_Log,
 		"\x1b[1;33mprofile\x1b[0m: %s: %llu\n",
 		name,
 		(unsigned long long)d
