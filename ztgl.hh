@@ -18,7 +18,7 @@ extern "C"
 
 #define ZTGL_VER_MAJOR 1
 #define ZTGL_VER_MINOR 0
-#define ZTGL_VER_PATCH 2
+#define ZTGL_VER_PATCH 3
 
 //--------//
 // macros //
@@ -943,7 +943,7 @@ UIPanel::Label(char const* text)
 	m_Elems[m_ElemsLength].m_Label.m_Type = Internal::LABEL;
 	m_Elems[m_ElemsLength].m_Label.m_Flags = Internal::INACTIVE * !m_Active;
 	m_Elems[m_ElemsLength].m_Label.m_X = m_X;
-	m_Elems[m_ElemsLength].m_Label.m_Y = m_X;
+	m_Elems[m_ElemsLength].m_Label.m_Y = m_Y;
 	m_Elems[m_ElemsLength].m_Label.m_W = w;
 	m_Elems[m_ElemsLength].m_Label.m_H = h;
 	m_Elems[m_ElemsLength].m_Label.m_Text = text;
@@ -1176,7 +1176,7 @@ UIPanel::TextField(char const* text, IN_OUT TFData& data, u32 nDraw)
 	m_Elems[m_ElemsLength].m_TextField.m_Type = Internal::TEXT_FIELD;
 	m_Elems[m_ElemsLength].m_TextField.m_Flags = Internal::INACTIVE * !m_Active;
 	m_Elems[m_ElemsLength].m_TextField.m_X = m_X;
-	m_Elems[m_ElemsLength].m_TextField.m_X = m_Y;
+	m_Elems[m_ElemsLength].m_TextField.m_Y = m_Y;
 	m_Elems[m_ElemsLength].m_TextField.m_W = w;
 	m_Elems[m_ElemsLength].m_TextField.m_H = h;
 	m_Elems[m_ElemsLength].m_TextField.m_Text = text;
