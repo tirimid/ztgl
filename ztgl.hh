@@ -17,7 +17,7 @@ extern "C"
 //--------------------------//
 
 #define ZTGL_VER_MAJOR 1
-#define ZTGL_VER_MINOR 1
+#define ZTGL_VER_MINOR 2
 #define ZTGL_VER_PATCH 0
 
 //--------//
@@ -316,6 +316,7 @@ bool MouseDown(i32 button);
 bool MousePressed(i32 button);
 bool MouseReleased(i32 button);
 bool TextInput(char c);
+bool ShiftDown();
 
 // options.
 ErrorCode OptionRaw(OUT char data[], FILE* file, char const* key);
@@ -601,6 +602,13 @@ TextInput(char c)
 	usize byte = c / 8;
 	usize bit = c % 8;
 	return Internal::textInputStates[byte] & 1 << bit;
+}
+
+bool
+ShiftDown()
+{
+	SDL_Keymod modState = SDL_GetModState();
+	return modState & KMOD_LSHIFT || modState & KMOD_RSHIFT;
 }
 
 //---------//
