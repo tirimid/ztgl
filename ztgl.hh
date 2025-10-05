@@ -17,8 +17,8 @@ extern "C"
 //--------------------------//
 
 #define	ZTGL_VER_MAJOR	1
-#define	ZTGL_VER_MINOR	2
-#define	ZTGL_VER_PATCH	1
+#define	ZTGL_VER_MINOR	3
+#define	ZTGL_VER_PATCH	0
 
 //--------//
 // macros //
@@ -92,17 +92,17 @@ namespace ZTGL
 // enumeration values //
 //--------------------//
 
-enum ErrorCode
+enum ErrorCode : u8
 {
-	OK = 0,
+	OK	= 0,
 	NOT_FOUND,
 	INVALID_FORMAT,
 	INVALID_CONVERSION
 };
 
-enum Color
+enum Color : u8
 {
-	PANEL_COLOR = 0,
+	PANEL_COLOR	= 0,
 	LABEL_TEXT_COLOR,
 	BUTTON_COLOR,
 	BUTTON_PRESS_COLOR,
@@ -317,6 +317,7 @@ bool			MousePressed(i32 button);
 bool			MouseReleased(i32 button);
 bool			TextInput(char c);
 bool			ShiftDown();
+bool			CtrlDown();
 
 // options.
 ErrorCode	OptionRaw(OUT char data[], FILE* file, char const* key);
@@ -379,12 +380,12 @@ namespace ZTGL
 namespace Internal
 {
 
-enum UIFlag
+enum UIFlag : u8
 {
 	INACTIVE = 0x1
 };
 
-enum UIType
+enum UIType : u8
 {
 	LABEL = 0,
 	BUTTON,
@@ -614,6 +615,14 @@ ShiftDown()
 {
 	SDL_Keymod	modState	= SDL_GetModState();
 	bool			down		= modState & KMOD_LSHIFT || modState & KMOD_RSHIFT;
+	return (down);
+}
+
+bool
+CtrlDown()
+{
+	SDL_Keymod	modState	= SDL_GetModState();
+	bool			down		= modState & KMOD_LCTRL || modState & KMOD_RCTRL;
 	return (down);
 }
 
