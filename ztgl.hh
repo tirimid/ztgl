@@ -18,7 +18,7 @@ extern "C"
 
 #define	ZTGL_VER_MAJOR	1
 #define	ZTGL_VER_MINOR	3
-#define	ZTGL_VER_PATCH	0
+#define	ZTGL_VER_PATCH	1
 
 //--------//
 // macros //
@@ -318,6 +318,7 @@ bool			MouseReleased(i32 button);
 bool			TextInput(char c);
 bool			ShiftDown();
 bool			CtrlDown();
+bool			AltDown();
 
 // options.
 ErrorCode	OptionRaw(OUT char data[], FILE* file, char const* key);
@@ -626,6 +627,14 @@ CtrlDown()
 	return (down);
 }
 
+bool
+AltDown()
+{
+	SDL_Keymod	modState	= SDL_GetModState();
+	bool			down		= modState & KMOD_LALT || modState & KMOD_RALT;
+	return (down);
+}
+
 //---------//
 // options //
 //---------//
@@ -635,7 +644,9 @@ OptionRaw(OUT char data[], FILE* file, char const* key)
 {
 	fseek(file, 0, SEEK_SET);
 	
-	for (usize line = 0; !feof(file) && !ferror(file); ++line)
+	for (usize	line	= 0;
+		!feof(file) && !ferror(file);
+		++line)
 	{
 		i32	c	{};
 		while (c = fgetc(file), c != EOF && isspace(c))
@@ -796,7 +807,9 @@ UIPanel::Render()
 	i32	minY	= INT32_MAX;
 	i32	maxX	= INT32_MIN;
 	i32	maxY	= INT32_MIN;
-	for (usize i = 0; i < m_ElemsLength; ++i)
+	for (usize	i	= 0;
+		i < m_ElemsLength;
+		++i)
 	{
 		i32	x	= m_Elems[i].m_Any.m_X;
 		i32	y	= m_Elems[i].m_Any.m_Y;
@@ -822,7 +835,9 @@ UIPanel::Render()
 	
 	// draw UI elements.
 	SDL_Point	m	= MousePos(m_Window);
-	for (usize i = 0; i < m_ElemsLength; ++i)
+	for (usize	i	= 0;
+		i < m_ElemsLength;
+		++i)
 	{
 		Internal::UIType	type	= (Internal::UIType)m_Elems[i].m_Any.m_Type;
 		i32					x		= m_Elems[i].m_Any.m_X;
@@ -943,7 +958,9 @@ UIPanel::Render()
 			Color			textColor	= data.m_Length ? textFieldTextColor : textFieldPromptColor;
 			
 			i32	dx	= 0;
-			for (u32 j = textFirst; j < textLength; ++j)
+			for (u32	j	= textFirst;
+				j < textLength;
+				++j)
 			{
 				if (dx >= w - 2 * pad)
 				{
@@ -1175,7 +1192,9 @@ UIPanel::TextField(char const* text, IN_OUT TFData& data, u32 nDraw)
 				}
 			}
 			
-			for (u8 i = 0; data.m_Length + 1 < data.m_Capacity && i < 128; ++i)
+			for (u8	i	= 0;
+				data.m_Length + 1 < data.m_Capacity && i < 128;
+				++i)
 			{
 				if (!isprint(i))
 				{
@@ -1388,7 +1407,9 @@ void*
 AllocBatch(IN_OUT AllocBatchDesc allocs[], usize nAllocs)
 {
 	usize	size	= 0;
-	for (usize i = 0; i < nAllocs; ++i)
+	for (usize	i	= 0;
+		i < nAllocs;
+		++i)
 	{
 		size += allocs[i].m_Count * allocs[i].m_Size;
 		size = Align(size, ZTGL_BATCH_ALIGN);
@@ -1401,7 +1422,9 @@ AllocBatch(IN_OUT AllocBatchDesc allocs[], usize nAllocs)
 	}
 	
 	usize	offset	= 0;
-	for (usize i = 0; i < nAllocs; ++i)
+	for (usize	i	= 0;
+		i < nAllocs;
+		++i)
 	{
 		*allocs[i].m_Pointer = &p[offset];
 		offset += allocs[i].m_Count * allocs[i].m_Size;
@@ -1419,7 +1442,9 @@ ReallocBatch(void* p, IN_OUT ReallocBatchDesc reallocs[], usize nReallocs)
 	
 	usize	newSize	= 0;
 	usize	oldSize	= 0;
-	for (usize i = 0; i < nReallocs; ++i)
+	for (usize	i	= 0;
+		i < nReallocs;
+		++i)
 	{
 		newOffsets[i] = newSize;
 		newSize += reallocs[i].m_NewCount * reallocs[i].m_Size;
@@ -1439,7 +1464,9 @@ ReallocBatch(void* p, IN_OUT ReallocBatchDesc reallocs[], usize nReallocs)
 	}
 	
 	u8*	up	= (u8*)p;
-	for (isize i = nReallocs - 1; i >= 0; --i)
+	for (isize	i	= nReallocs - 1;
+		i >= 0;
+		--i)
 	{
 		usize	newBytes	= reallocs[i].m_NewCount * reallocs[i].m_Size;
 		usize	oldBytes	= reallocs[i].m_OldCount * reallocs[i].m_Size;
