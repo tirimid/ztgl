@@ -17,8 +17,8 @@ extern "C"
 //--------------------------//
 
 #define	ZTGL_VER_MAJOR	1
-#define	ZTGL_VER_MINOR	3
-#define	ZTGL_VER_PATCH	1
+#define	ZTGL_VER_MINOR	4
+#define	ZTGL_VER_PATCH	0
 
 //--------//
 // macros //
@@ -46,7 +46,7 @@ extern "C"
 #endif
 
 // library data constants.
-#define	ZTGL_BATCH_ALIGN			16
+#define	ZTGL_MEMORY_ALIGN			16
 #define	ZTGL_MAX_OPTION_KEY		128
 #define	ZTGL_MAX_OPTION_VALUE	128
 #define	ZTGL_OPTION_SCAN			"%127s = %127[^\r\n]"
@@ -246,6 +246,12 @@ struct ReallocBatchDesc
 	usize		m_Size;
 };
 
+struct Allocation
+{
+	usize	m_Offset;
+	usize	m_Length;
+};
+
 //------------------------------//
 // data structures with methods //
 //------------------------------//
@@ -286,6 +292,41 @@ struct UIPanel
 	bool					HoldButton(char const* text);
 	
 	UIPanel(UIElem elems[], usize elemsCapacity, TTF_Font* font, SDL_Window const* window);
+};
+
+// memory management.
+struct BumpAllocator
+{
+	u8*	m_Buffer		{};
+	usize	m_Capacity	{};
+	usize	m_Length		{};
+	
+	void*	Alloc(usize n);
+	void	Reset();
+	
+	BumpAllocator(u8* buffer, usize capacity);
+};
+
+struct LinkedListAllocator
+{
+	// TODO: define interface for linked list allocator.
+};
+
+struct ArrayAllocator
+{
+	u8*			m_Buffer						{};
+	usize			m_BufferCapacity			{};
+	Allocation*	m_Allocations				{};
+	usize			m_AllocationsCapacity	{};
+	usize			m_AllocationsLength		{};
+	
+	void*			Alloc(usize n);
+	void			Free(void* pointer);
+	void*			Realloc(void* pointer, usize n);
+	bool			RegionFree(usize offset, usize length);
+	void			Reset();
+	
+	ArrayAllocator(u8* buffer, usize bufferCapacity, Allocation* allocations, usize allocationsCapacity);
 };
 
 //-----------------------//
@@ -644,9 +685,7 @@ OptionRaw(OUT char data[], FILE* file, char const* key)
 {
 	fseek(file, 0, SEEK_SET);
 	
-	for (usize	line	= 0;
-		!feof(file) && !ferror(file);
-		++line)
+	for (usize line = 0; !feof(file) && !ferror(file); ++line)
 	{
 		i32	c	{};
 		while (c = fgetc(file), c != EOF && isspace(c))
@@ -807,9 +846,7 @@ UIPanel::Render()
 	i32	minY	= INT32_MAX;
 	i32	maxX	= INT32_MIN;
 	i32	maxY	= INT32_MIN;
-	for (usize	i	= 0;
-		i < m_ElemsLength;
-		++i)
+	for (usize i = 0; i < m_ElemsLength; ++i)
 	{
 		i32	x	= m_Elems[i].m_Any.m_X;
 		i32	y	= m_Elems[i].m_Any.m_Y;
@@ -835,9 +872,7 @@ UIPanel::Render()
 	
 	// draw UI elements.
 	SDL_Point	m	= MousePos(m_Window);
-	for (usize	i	= 0;
-		i < m_ElemsLength;
-		++i)
+	for (usize i = 0; i < m_ElemsLength; ++i)
 	{
 		Internal::UIType	type	= (Internal::UIType)m_Elems[i].m_Any.m_Type;
 		i32					x		= m_Elems[i].m_Any.m_X;
@@ -958,9 +993,7 @@ UIPanel::Render()
 			Color			textColor	= data.m_Length ? textFieldTextColor : textFieldPromptColor;
 			
 			i32	dx	= 0;
-			for (u32	j	= textFirst;
-				j < textLength;
-				++j)
+			for (u32 j = textFirst; j < textLength; ++j)
 			{
 				if (dx >= w - 2 * pad)
 				{
@@ -1192,9 +1225,7 @@ UIPanel::TextField(char const* text, IN_OUT TFData& data, u32 nDraw)
 				}
 			}
 			
-			for (u8	i	= 0;
-				data.m_Length + 1 < data.m_Capacity && i < 128;
-				++i)
+			for (u8 i = 0; data.m_Length + 1 < data.m_Capacity && i < 128; ++i)
 			{
 				if (!isprint(i))
 				{
@@ -1312,6 +1343,116 @@ UIPanel::HoldButton(char const* text)
 	return (state);
 }
 
+//-------------------//
+// memory management //
+//-------------------//
+
+void*
+BumpAllocator::Alloc(usize n)
+{
+	u8*	allocation	= &m_Buffer[m_Length];
+	m_Length += n;
+	m_Length = Align(m_Length, ZTGL_MEMORY_ALIGN);
+	
+	u8*	actual	= m_Length > m_Capacity ? nullptr : allocation;
+	return (actual);
+}
+
+void
+BumpAllocator::Reset()
+{
+	memset(m_Buffer, 0, m_Capacity);
+	m_Length = 0;
+}
+
+BumpAllocator::BumpAllocator(u8* buffer, usize capacity)
+	: m_Buffer(buffer), m_Capacity(capacity)
+{
+	memset(m_Buffer, 0, m_Capacity);
+}
+
+void*
+ArrayAllocator::Alloc(usize n)
+{
+	if (m_AllocationsLength >= m_AllocationsCapacity)
+	{
+		return (nullptr);
+	}
+	
+	for (usize i = 0; i < m_AllocationsLength; ++i)
+	{
+		usize	offset	= m_Allocations[i].m_Offset + m_Allocations[i].m_Length;
+		offset = Align(offset, ZTGL_MEMORY_ALIGN);
+		
+		if (!RegionFree(offset, n))
+		{
+			continue;
+		}
+		
+		if (offset + n > m_BufferCapacity)
+		{
+			continue;
+		}
+		
+		m_Allocations[m_AllocationsLength].m_Offset	= offset;
+		m_Allocations[m_AllocationsLength].m_Length	= n;
+		++m_AllocationsLength;
+		return (&m_Buffer[offset]);
+	}
+	
+	return (nullptr);
+}
+
+void
+ArrayAllocator::Free(void* pointer)
+{
+	// TODO: implement.
+}
+
+void*
+ArrayAllocator::Realloc(void* pointer, usize n)
+{
+	// TODO: implement.
+}
+
+bool
+ArrayAllocator::RegionFree(usize offset, usize length)
+{
+	for (usize i = 0; i < m_AllocationsLength; ++i)
+	{
+		bool	noOverlapLeft	= offset + length < m_Allocations[i].m_Offset;
+		bool	noOverlapRight	= offset >= m_Allocations[i].m_Offset + m_Allocations[i].m_Length;
+		bool	noOverlap		= noOverlapLeft || noOverlapRight;
+		
+		if (!noOverlap)
+		{
+			return (false);
+		}
+	}
+	return (true);
+}
+
+void
+ArrayAllocator::Reset()
+{
+	memset(m_Buffer, 0, m_BufferCapacity);
+	m_AllocationsLength = 0;
+}
+
+ArrayAllocator::ArrayAllocator(
+	u8*			buffer,
+	usize			bufferCapacity,
+	Allocation*	allocations,
+	usize			allocationsCapacity
+)
+	: m_Buffer(buffer),
+	m_BufferCapacity(bufferCapacity),
+	m_Allocations(allocations),
+	m_AllocationsCapacity(allocationsCapacity)
+{
+	memset(m_Buffer, 0, m_BufferCapacity);
+}
+
 //------//
 // util //
 //------//
@@ -1322,7 +1463,7 @@ Error(char const* format, ...)
 	va_list	args	{};
 	va_start(args, format);
 	
-	char	msg[512];
+	char	msg[512]	= {0};
 	vsnprintf(msg, sizeof(msg), format, args);
 	
 	if (SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, conf.m_ErrorTitle, msg, nullptr))
@@ -1407,12 +1548,10 @@ void*
 AllocBatch(IN_OUT AllocBatchDesc allocs[], usize nAllocs)
 {
 	usize	size	= 0;
-	for (usize	i	= 0;
-		i < nAllocs;
-		++i)
+	for (usize i = 0; i < nAllocs; ++i)
 	{
 		size += allocs[i].m_Count * allocs[i].m_Size;
-		size = Align(size, ZTGL_BATCH_ALIGN);
+		size = Align(size, ZTGL_MEMORY_ALIGN);
 	}
 	
 	u8*	p	= (u8*)malloc(size);
@@ -1422,13 +1561,11 @@ AllocBatch(IN_OUT AllocBatchDesc allocs[], usize nAllocs)
 	}
 	
 	usize	offset	= 0;
-	for (usize	i	= 0;
-		i < nAllocs;
-		++i)
+	for (usize i = 0; i < nAllocs; ++i)
 	{
 		*allocs[i].m_Pointer = &p[offset];
 		offset += allocs[i].m_Count * allocs[i].m_Size;
-		offset = Align(offset, ZTGL_BATCH_ALIGN);
+		offset = Align(offset, ZTGL_MEMORY_ALIGN);
 	}
 	
 	return (p);
@@ -1442,17 +1579,15 @@ ReallocBatch(void* p, IN_OUT ReallocBatchDesc reallocs[], usize nReallocs)
 	
 	usize	newSize	= 0;
 	usize	oldSize	= 0;
-	for (usize	i	= 0;
-		i < nReallocs;
-		++i)
+	for (usize i = 0; i < nReallocs; ++i)
 	{
 		newOffsets[i] = newSize;
 		newSize += reallocs[i].m_NewCount * reallocs[i].m_Size;
-		newSize = Align(newSize, ZTGL_BATCH_ALIGN);
+		newSize = Align(newSize, ZTGL_MEMORY_ALIGN);
 		
 		oldOffsets[i] = oldSize;
 		oldSize += reallocs[i].m_OldCount * reallocs[i].m_Size;
-		oldSize = Align(oldSize, ZTGL_BATCH_ALIGN);
+		oldSize = Align(oldSize, ZTGL_MEMORY_ALIGN);
 	}
 	
 	p = realloc(p, newSize);
@@ -1464,9 +1599,7 @@ ReallocBatch(void* p, IN_OUT ReallocBatchDesc reallocs[], usize nReallocs)
 	}
 	
 	u8*	up	= (u8*)p;
-	for (isize	i	= nReallocs - 1;
-		i >= 0;
-		--i)
+	for (isize i = nReallocs - 1; i >= 0; --i)
 	{
 		usize	newBytes	= reallocs[i].m_NewCount * reallocs[i].m_Size;
 		usize	oldBytes	= reallocs[i].m_OldCount * reallocs[i].m_Size;
