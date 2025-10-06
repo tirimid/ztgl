@@ -18,7 +18,7 @@ extern "C"
 
 #define	ZTGL_VER_MAJOR	1
 #define	ZTGL_VER_MINOR	4
-#define	ZTGL_VER_PATCH	0
+#define	ZTGL_VER_PATCH	1
 
 //--------//
 // macros //
@@ -506,7 +506,7 @@ HandleInput(SDL_Event const& event)
 		if (key & 1 << 30)
 		{
 			key &= ~(1 << 30);
-			key += 12;
+			key += 128;
 		}
 		
 		usize	byte	= key / 8;
