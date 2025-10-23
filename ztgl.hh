@@ -28,9 +28,9 @@ extern "C"
 
 // profiling
 #ifdef ZTGL_PROFILE
-#define ZTGL_NEW_TIMER(timer)   u64 timer
-#define ZTGL_BEGIN_TIMER(timer) ZTGL::BeginTimer(timer)
-#define ZTGL_END_TIMER(timer)   ZTGL::EndTimer(timer, name)
+#define ZTGL_NEW_TIMER(timer)       u64 timer
+#define ZTGL_BEGIN_TIMER(timer)     ZTGL::BeginTimer(timer)
+#define ZTGL_END_TIMER(timer, name) ZTGL::EndTimer(timer, name)
 #else
 #define ZTGL_NEW_TIMER(timer)
 #define ZTGL_BEGIN_TIMER(timer)
